@@ -1,9 +1,8 @@
 package main
 
-import (
-
-)
+import 
 
 func main() {
+	var botToken string
 	
 }
