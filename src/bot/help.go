@@ -2,7 +2,7 @@ package bot
 
 import "bwmarrin/discordgo"
 
-func help(ChannelID string) {
+func help(ChannelID string, session *discordgo.Session) {
 	embed := &discordgo.MessageEmbed{
 		Title: "Help",
 		Description: "List of commands",

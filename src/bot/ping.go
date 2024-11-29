@@ -5,7 +5,7 @@ import (
 	"github.com/go-ping/ping"
 )
 
-func ping(ChannelID string) {
+func ping(ChannelID string, session *discordgo.Session) {
 	target := "google.com"
 	pinger, err := ping.NewPinger(target)
 	handleErr(err)
@@ -17,5 +17,5 @@ func ping(ChannelID string) {
 	handleErr(err)
 
 	stats := pinger.Statistics()
-	fmt.Printf("🏓Pong! %v\n", stats.AvgRtt.Milliseconds())
+	session.ChannelMessageSend(ChannelID, fmt.Sprintf("🏓Pong! %vms", stats.AvgRtt.Milliseconds()))
 }

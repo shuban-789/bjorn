@@ -30,8 +30,8 @@ func tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 	  
 	switch {
 		case strings.Contains(message.Content, "!help"):
-			help(message.ChannelID)
+			help(message.ChannelID, session)
 		case strings.Contains(message.Content, "!ping"):
-			ping(message.ChannelID)
+			ping(message.ChannelID, session)
 	}
 }
