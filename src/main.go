@@ -1,8 +1,14 @@
 package main
 
-import 
+import (
+	"src/bot"
+	"os"
+)
 
 func main() {
-	var botToken string
-	
+	BotToken := os.Getenv("DSC_BOT_TOKEN")
+	if BotToken == "" {
+		panic("No bot token provided")
+	}
+	bot.Run(BotToken)
 }
