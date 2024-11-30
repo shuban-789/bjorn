@@ -1,11 +1,13 @@
 package bot
 
 import ( 
-	"bwmarrin/discordgo"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-ping/ping"
+	"time"
+	"fmt"
 )
 
-func ping(ChannelID string, session *discordgo.Session) {
+func pingcmd(ChannelID string, session *discordgo.Session) {
 	target := "google.com"
 	pinger, err := ping.NewPinger(target)
 	handleErr(err)

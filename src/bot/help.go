@@ -1,8 +1,8 @@
 package bot
 
-import "bwmarrin/discordgo"
+import "github.com/bwmarrin/discordgo"
 
-func help(ChannelID string, session *discordgo.Session) {
+func helpcmd(ChannelID string, session *discordgo.Session) {
 	embed := &discordgo.MessageEmbed{
 		Title: "Help",
 		Description: "List of commands",

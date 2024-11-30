@@ -1,8 +1,9 @@
 package bot
 
 import (
-	"bwmarrin/discordgo"
+	"github.com/bwmarrin/discordgo"
 	"fmt"
+	"strings"
 )
 
 func handleErr(err error) {
@@ -15,23 +16,22 @@ func Run(token string) {
 	session, err := discordgo.New("Bot " + token)
 	handleErr(err)
 
-	session.AddHandler(messageCreate)
-	err = session.Open()
-	defer session.Close()
-	handleErr(err)
-
+		session.AddHandler(tree)
+		err = session.Open()
+		defer session.Close()
+		handleErr(err)
 	fmt.Println("\033[32m[SUCCESS]\033[0m Bot is running")
 }
 
 func tree(session *discordgo.Session, message *discordgo.MessageCreate) {
-	if message.Author.ID == discord.State.User.ID {
+	if message.Author.ID == session.State.User.ID {
 		return
 	}
 	  
 	switch {
 		case strings.Contains(message.Content, "!help"):
-			help(message.ChannelID, session)
+			helpcmd(message.ChannelID, session)
 		case strings.Contains(message.Content, "!ping"):
-			ping(message.ChannelID, session)
+			pingcmd(message.ChannelID, session)
 	}
 }
