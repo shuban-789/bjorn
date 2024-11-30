@@ -15,6 +15,7 @@ func HandleErr(err error) {
 func Deploy(token string) {
 	session, err := discordgo.New("Bot " + token)
 	HandleErr(err)
+	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages
 	session.AddHandler(Tree)
 	err = session.Open()
 	defer session.Close()
@@ -48,11 +49,28 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 	if message.Author.ID == session.State.User.ID {
 		return
 	}
-	
-	switch {
-		case strings.Contains(message.Content, ">>help"):
+
+	fmt.Printf("Message Details: Content='%s', Author='%s', Channel='%s'\n", 
+		message.Content, message.Author.Username, message.ChannelID)
+
+	if strings.TrimSpace(message.Content) == "" {
+		fmt.Println("Message content is empty. Ignoring.")
+		return
+	}
+
+	if strings.HasPrefix(message.Content, ">>") {
+		command := strings.TrimPrefix(message.Content, ">>")
+		command = strings.TrimSpace(command)
+
+		fmt.Printf("Processing command: '%s'\n", command)
+
+		switch command {
+		case "help":
 			helpcmd(message.ChannelID, session)
-		case strings.Contains(message.Content, ">>ping"):
+		case "ping":
 			pingcmd(message.ChannelID, session)
+		default:
+			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")
+		}
 	}
 }
