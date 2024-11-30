@@ -15,12 +15,13 @@ func handleErr(err error) {
 func Run(token string) {
 	session, err := discordgo.New("Bot " + token)
 	handleErr(err)
-
-		session.AddHandler(tree)
-		err = session.Open()
-		defer session.Close()
-		handleErr(err)
+	session.AddHandler(tree)
+	err = session.Open()
+	defer session.Close()
+	handleErr(err)
 	fmt.Println("\033[32m[SUCCESS]\033[0m Bot is running")
+
+	select {}
 }
 
 func tree(session *discordgo.Session, message *discordgo.MessageCreate) {

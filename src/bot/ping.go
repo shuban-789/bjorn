@@ -19,5 +19,5 @@ func pingcmd(ChannelID string, session *discordgo.Session) {
 	handleErr(err)
 
 	stats := pinger.Statistics()
-	session.ChannelMessageSend(ChannelID, fmt.Sprintf("🏓Pong! %vms", stats.AvgRtt.Milliseconds()))
+	session.ChannelMessageSend(ChannelID, fmt.Sprintf("🏓 Pong! %vms", stats.AvgRtt.Milliseconds()))
 }
