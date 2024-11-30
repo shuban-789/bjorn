@@ -50,11 +50,11 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		return
 	}
 
-	fmt.Printf("Message Details: Content='%s', Author='%s', Channel='%s'\n", 
+	fmt.Printf("\033[33m[INFO]\033[0m Message Details: Content='%s', Author='%s', Channel='%s'\n", 
 		message.Content, message.Author.Username, message.ChannelID)
 
 	if strings.TrimSpace(message.Content) == "" {
-		fmt.Println("Message content is empty. Ignoring.")
+		fmt.Println("\033[33m[INFO]\033[0m Message content is empty. Ignoring.")
 		return
 	}
 
@@ -62,7 +62,7 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		command := strings.TrimPrefix(message.Content, ">>")
 		command = strings.TrimSpace(command)
 
-		fmt.Printf("Processing command: '%s'\n", command)
+		fmt.Printf("\033[33m[INFO]\033[0m Processing command: '%s'\n", command)
 
 		switch command {
 		case "help":
