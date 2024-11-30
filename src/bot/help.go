@@ -6,7 +6,7 @@ func helpcmd(ChannelID string, session *discordgo.Session) {
 	embed := &discordgo.MessageEmbed{
 		Title: "Help",
 		Description: "List of commands",
-		Color: 0x00ff00,
+		Color: 0x72cfdd,
 		Fields: []*discordgo.MessageEmbedField{
 			&discordgo.MessageEmbedField{
 				Name: "!help",
