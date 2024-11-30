@@ -6,33 +6,53 @@ import (
 	"strings"
 )
 
-func handleErr(err error) {
+func HandleErr(err error) {
 	if err != nil {
 		fmt.Println("\033[31m[FAIL]\033[0m Error: %v", err)
 	}
 }
 
-func Run(token string) {
+func Deploy(token string) {
 	session, err := discordgo.New("Bot " + token)
-	handleErr(err)
-	session.AddHandler(tree)
+	HandleErr(err)
+	session.AddHandler(Tree)
 	err = session.Open()
 	defer session.Close()
-	handleErr(err)
+	HandleErr(err)
 	fmt.Println("\033[32m[SUCCESS]\033[0m Bot is running")
 
 	select {}
 }
 
-func tree(session *discordgo.Session, message *discordgo.MessageCreate) {
+func SlashCommands(session *discordgo.Session) {
+	commands := []*discordgo.ApplicationCommand{
+		{
+			Name:        "help",
+			Description: "Shows the help menu",
+		},
+		{
+			Name:        "ping",
+			Description: "Checks the bot's response time",
+		},
+	}
+
+	for _, command := range commands {
+		_, err := session.ApplicationCommandCreate(session.State.User.ID, "", command)
+		if err != nil {
+			fmt.Printf("Failed to create command '%s': %v\n", command.Name, err)
+		}
+	}
+}
+
+func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 	if message.Author.ID == session.State.User.ID {
 		return
 	}
-	  
+	
 	switch {
-		case strings.Contains(message.Content, "!help"):
+		case strings.Contains(message.Content, ">>help"):
 			helpcmd(message.ChannelID, session)
-		case strings.Contains(message.Content, "!ping"):
+		case strings.Contains(message.Content, ">>ping"):
 			pingcmd(message.ChannelID, session)
 	}
 }

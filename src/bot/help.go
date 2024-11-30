@@ -9,12 +9,12 @@ func helpcmd(ChannelID string, session *discordgo.Session) {
 		Color: 0x72cfdd,
 		Fields: []*discordgo.MessageEmbedField{
 			&discordgo.MessageEmbedField{
-				Name: "!help",
+				Name: ">>help",
 				Value: "Display this message",
 			},
 			&discordgo.MessageEmbedField{
-				Name: "!ping",
-				Value: "Ping the bot",
+				Name: ">>ping",
+				Value: "Bot response latency",
 			},
 		},
 	}

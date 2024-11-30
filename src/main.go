@@ -11,5 +11,5 @@ func main() {
 	if BotToken == "" {
 		fmt.Println("\033[31m[FAIL]\033[0m No Bot Token found")
 	}
-	bot.Run(BotToken)
+	bot.Deploy(BotToken)
 }
