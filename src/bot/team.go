@@ -68,7 +68,7 @@ func showTeamInfo(ChannelID string, teamNumber string, session *discordgo.Sessio
 	}
 
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("Info for Team %d: %s", team.Number, team.Name),
+		Title:       fmt.Sprintf("Info for Team %d (%s)", team.Number, team.Name),
 		Description: fmt.Sprintf("**Team Number:** %d\n**School:** %s\n**City/State:** %s, %s\n**Rookie Year:** %d\n**Country:** %s",
 			team.Number, team.SchoolName, team.City, team.State, team.RookieYear, team.Country),
 		Color: 0x72cfdd,
