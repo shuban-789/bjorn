@@ -180,7 +180,6 @@ func teamStats(ChannelID string, teamNumber string, session *discordgo.Session) 
 
 // Awards FTCScout API
 func teamAwards(ChannelID string, teamNumber string, session *discordgo.Session) {
-	// Struct for a single team award
 	type TeamAward struct {
 		Season        int    `json:"season"`
 		EventCode     string `json:"eventCode"`
@@ -234,6 +233,7 @@ func teamAwards(ChannelID string, teamNumber string, session *discordgo.Session)
 		})
 	}
 
+	// HandleErr() can't be used for client-side response
 	_, err = session.ChannelMessageSendEmbed(ChannelID, embed)
 	if err != nil {
 		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to send awards embed for Team %s: %v", teamNumber, err))
