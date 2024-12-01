@@ -59,16 +59,19 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(message.Content, ">>") {
-		command := strings.TrimPrefix(message.Content, ">>")
-		command = strings.TrimSpace(command)
+		args := strings.Fields(message.Content)
+		if len(args) == 0 {
+			return
+		}
+		fmt.Printf("\033[33m[INFO]\033[0m Processing command: '%s'\n", args[0])
 
-		fmt.Printf("\033[33m[INFO]\033[0m Processing command: '%s'\n", command)
-
-		switch command {
-		case "help":
+		switch args[0] {
+		case ">>help":
 			helpcmd(message.ChannelID, session)
-		case "ping":
+		case ">>ping":
 			pingcmd(message.ChannelID, session)
+		case ">>team":
+			teamcmd(message.ChannelID, args[1:], session)
 		default:
 			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")
 		}
