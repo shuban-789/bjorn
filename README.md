@@ -7,3 +7,7 @@
 **🛠️ Made With**
 - [The Go Programming Language](https://github.com/golang/go)
 - [discordgo](https://github.com/bwmarrin/discordgo)
+
+**Discord Contacts**
+- `@shuban-789 --> @shubuntu`
+- `@aaguy-hue --> dj_snowball`
