@@ -10,4 +10,4 @@
 
 **Discord Contacts**
 - `@shuban-789 --> @shubuntu`
-- `@aaguy-hue --> dj_snowball`
+- `@aaguy-hue --> @dj_snowball`
