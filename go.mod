@@ -1,4 +1,4 @@
-module github.com/shuban-789/Gobot
+module github.com/shuban-789/bjorn
 
 go 1.23.3
 
