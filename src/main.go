@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/shuban-789/Gobot/src/bot"
+	"github.com/shuban-789/bjorn/src/bot"
 	"os"
 	"fmt"
 )
