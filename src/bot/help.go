@@ -4,17 +4,21 @@ import "github.com/bwmarrin/discordgo"
 
 func helpcmd(ChannelID string, session *discordgo.Session) {
 	embed := &discordgo.MessageEmbed{
-		Title: "Help",
+		Title:       "Help",
 		Description: "List of commands",
-		Color: 0x72cfdd,
+		Color:       0x72cfdd,
 		Fields: []*discordgo.MessageEmbedField{
 			&discordgo.MessageEmbedField{
-				Name: ">>help",
+				Name:  ">>help",
 				Value: "Display this message",
 			},
 			&discordgo.MessageEmbedField{
-				Name: ">>ping",
+				Name:  ">>ping",
 				Value: "Bot response latency",
+			},
+			&discordgo.MessageEmbedField{
+				Name:  ">>team [team_id]",
+				Value: "Return information about a team",
 			},
 		},
 	}

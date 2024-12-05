@@ -1,15 +1,22 @@
 package bot
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"fmt"
 	"strings"
+
+	"github.com/bwmarrin/discordgo"
 )
 
-func HandleErr(err error) {
+/**
+ * Returns true if there was an error, returns false otherwise.
+ */
+func HandleErr(err error) bool {
 	if err != nil {
 		fmt.Println("\033[31m[FAIL]\033[0m Error: %v", err)
+		return true
 	}
+
+	return false
 }
 
 func Deploy(token string) {
@@ -50,7 +57,7 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		return
 	}
 
-	fmt.Printf("\033[33m[INFO]\033[0m Message Details: Content='%s', Author='%s', Channel='%s'\n", 
+	fmt.Printf("\033[33m[INFO]\033[0m Message Details: Content='%s', Author='%s', Channel='%s'\n",
 		message.Content, message.Author.Username, message.ChannelID)
 
 	if strings.TrimSpace(message.Content) == "" {
@@ -72,6 +79,8 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 			pingcmd(message.ChannelID, session)
 		case ">>team":
 			teamcmd(message.ChannelID, args[1:], session)
+		case ">>roleme":
+			rolemeCmd(message.ChannelID, args[1:], session, message.GuildID)
 		default:
 			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")
 		}

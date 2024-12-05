@@ -1,74 +1,74 @@
-4262 Ridgebots
-5131 Pointers
-6016 Ironwolves
-8097 Botcats
-9266 Pyrobots
-9892 EngiNERDs
-12778 Tech Empire
-13089 E T Brigade
-15097 Python
-15171 Scorpio
-18365 Dapper RoboNoodles
-22105 Runtime Terror
-22321 Holy Calves
-22567 Xbots
-23676 Bumble Bee
-24218 BurritoBots
-24312 EGG
-27521 SoCal Surfing Robots
-5015 Buffalo Wings
-6226 Bambusa
-9049 RoboPuffs
-9261 Level Up
-10809 Crow Force
-11212 The Clueless
-13084 Robot Raiders
-14496 Roboctopi
-14535 Alpacas
-14968 Matador Mechanics
-18142 Fusion
-21303 Pandamonium
-22529 RoboGOATs
-24142 Steel Vengeance
-24664 RoBusted
-26637 Circuit Crawlers
-27600 SDFAS Robotics 1
-27602 SDFAS Robotics 2
-1622 Team Spyder
-3650 Limited Liability
-3848 Shockwave
-4216 Rise of Hephaestus
-8380 UC Robotics
-8606 RSF Intergalactic Dragons
-9164 Zorrobots
-16192 Prepare to ALT+F4
-19763 Definitely Human
-20355 Keep It Simple 2
-20422 Team Spyder Too
-23251 Triple Fault
-23673 Mech-A-Mind
-23696 Kinematic Flying Chickens
-24041 Solid State
-25993 Mechanical Meatloaf
-26061 The Rock Warriors
-26471 Steady State
-26852 Team Hope
-7159 Robo Ravens
-7609 Lions
-10092 Green.Griffins;
-10793 Voltrons
-11128 Inspiration
-11285 PATENT PENDING
-12499 Gear Up
-14338 CAOS Robotics
-16884 Mechanical Advantage
-18263 HIGH VOLTAGE
-23280 C.A.R.T
-23997 Catalysts
-24029 CocoNuts and Bolts
-24111 Coyote CODEX
-24730 Robo Valley
-24982 e-3PO
-26013 Bengal Bots
-26235 RoboGenesis
-26982 Tiki Tech
+4262*!*Ridgebots
+5131*!*Pointers
+6016*!*Ironwolves
+8097*!*Botcats
+9266*!*Pyrobots
+9892*!*EngiNERDs
+12778*!*Tech Empire
+13089*!*E T Brigade
+15097*!*Python
+15171*!*Scorpio
+18365*!*Dapper RoboNoodles
+22105*!*Runtime Terror
+22321*!*Holy Calves
+22567*!*Xbots
+23676*!*Bumble Bee
+24218*!*BurritoBots
+24312*!*EGG
+27521*!*SoCal Surfing Robots
+5015*!*Buffalo Wings
+6226*!*Bambusa
+9049*!*RoboPuffs
+9261*!*Level Up
+10809*!*Crow Force
+11212*!*The Clueless
+13084*!*Robot Raiders
+14496*!*Roboctopi
+14535*!*Alpacas
+14968*!*Matador Mechanics
+18142*!*Fusion
+21303*!*Pandamonium
+22529*!*RoboGOATs
+24142*!*Steel Vengeance
+24664*!*RoBusted
+26637*!*Circuit Crawlers
+27600*!*SDFAS Robotics 1
+27602*!*SDFAS Robotics 2
+1622*!*Team Spyder
+3650*!*Limited Liability
+3848*!*Shockwave
+4216*!*Rise of Hephaestus
+8380*!*UC Robotics
+8606*!*RSF Intergalactic Dragons
+9164*!*Zorrobots
+16192*!*Prepare to ALT+F4
+19763*!*Definitely Human
+20355*!*Keep It Simple 2
+20422*!*Team Spyder Too
+23251*!*Triple Fault
+23673*!*Mech-A-Mind
+23696*!*Kinematic Flying Chickens
+24041*!*Solid State
+25993*!*Mechanical Meatloaf
+26061*!*The Rock Warriors
+26471*!*Steady State
+26852*!*Team Hope
+7159*!*Robo Ravens
+7609*!*Lions
+10092*!*Green.Griffins;
+10793*!*Voltrons
+11128*!*Inspiration
+11285*!*PATENT PENDING
+12499*!*Gear Up
+14338*!*CAOS Robotics
+16884*!*Mechanical Advantage
+18263*!*HIGH VOLTAGE
+23280*!*C.A.R.T
+23997*!*Catalysts
+24029*!*CocoNuts and Bolts
+24111*!*Coyote CODEX
+24730*!*Robo Valley
+24982*!*e-3PO
+26013*!*Bengal Bots
+26235*!*RoboGenesis
+26982*!*Tiki Tech
