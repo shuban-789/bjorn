@@ -8,7 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guildId string) {
+func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
 	if len(args) != 1 {
 		session.ChannelMessageSend(ChannelID, "Please provide a team number, and nothing more.")
 		return
@@ -17,7 +17,7 @@ func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guil
 	var teamName string = ""
 
 	teamNumber := args[0]
-	file, err := os.Open("bot/util/2024-25.txt")
+	file, err := os.Open("src/bot/util/2024-25.txt")
 	if HandleErr(err) {
 		session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't load the list of team names")
 		return
@@ -92,7 +92,7 @@ func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guil
 	}
 
 	// add role to person
-	err = session.GuildMemberRoleAdd(guildId, session.State.User.ID, roleID)
+	err = session.GuildMemberRoleAdd(guildId, authorID, roleID)
 	if HandleErr(err) {
 		session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't assign the role to you.")
 		return
