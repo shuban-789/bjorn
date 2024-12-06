@@ -4,13 +4,44 @@ import (
 	"bufio"
 	"os"
 	"strings"
-
+    "crypto/sha256"
+    "encoding/hex"
 	"github.com/bwmarrin/discordgo"
 )
+
+func hash(ID string) string {
+	hash := sha256.Sum256([]byte(ID))
+	hashString := hex.EncodeToString(hash[:])
+    return hashString
+}
 
 func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
 	if len(args) != 1 {
 		session.ChannelMessageSend(ChannelID, "Please provide a team number, and nothing more.")
+		return
+	}
+
+    // shuban's blacklist code
+    blacklistFile, err := os.Open("src/bot/util/blacklist.txt")
+	if HandleErr(err) {
+		session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't load the list of team names")
+		return
+	}
+	defer blacklistFile.Close()
+
+    blacklist := bufio.NewScanner(blacklistFile)
+	for blacklist.Scan() {
+		ban := blacklist.Text()
+        hashedID := hash(authorID)
+		if strings.Compare(ban, hashedID) == 0 {
+            session.ChannelMessageSend(ChannelID, "Sorry, but you are banned from using this command.")
+            return
+        }
+	}
+
+	if err := blacklist.Err(); err != nil {
+		HandleErr(err)
+		session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't read the list of team names")
 		return
 	}
 
