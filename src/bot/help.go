@@ -1,6 +1,8 @@
 package bot
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+)
 
 func helpcmd(ChannelID string, session *discordgo.Session) {
 	embed := &discordgo.MessageEmbed{

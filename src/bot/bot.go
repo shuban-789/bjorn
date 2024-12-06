@@ -3,7 +3,6 @@ package bot
 import (
 	"fmt"
 	"strings"
-
 	"github.com/bwmarrin/discordgo"
 )
 
