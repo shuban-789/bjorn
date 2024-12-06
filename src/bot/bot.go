@@ -32,26 +32,6 @@ func Deploy(token string) {
 	select {}
 }
 
-func SlashCommands(session *discordgo.Session) {
-	commands := []*discordgo.ApplicationCommand{
-		{
-			Name:        "help",
-			Description: "Shows the help menu",
-		},
-		{
-			Name:        "ping",
-			Description: "Checks the bot's response time",
-		},
-	}
-
-	for _, command := range commands {
-		_, err := session.ApplicationCommandCreate(session.State.User.ID, "", command)
-		if err != nil {
-			fmt.Printf("Failed to create command '%s': %v\n", command.Name, err)
-		}
-	}
-}
-
 func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 	if message.Author.ID == session.State.User.ID {
 		return
