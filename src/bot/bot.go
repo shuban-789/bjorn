@@ -61,7 +61,7 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		case ">>roleme":
 			rolemeCmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
 		case ">>match":
-			matchcmd(message.ChannelID, args[1:], session)
+			matchcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
 		default:
 			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")
 		}

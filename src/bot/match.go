@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 )
 
-func matchcmd(channelID string, args []string, session *discordgo.Session) {
+func matchcmd(channelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
     if len(args) < 1 {
         session.ChannelMessageSend(channelID, "Please provide a subcommand (e.g., 'info').")
         return
@@ -29,10 +29,35 @@ func matchcmd(channelID string, args []string, session *discordgo.Session) {
         matchNumber := args[3]
 
         getMatch(channelID, year, eventCode, matchNumber, session)
+	case "eventstart":
+		if len(args) < 3 {
+			session.ChannelMessageSend(channelID, "Usage: `>>match eventstart <year> <eventCode>`")
+			return
+		}
 
+		if isAdmin(session, guildId, authorID) {
+			session.ChannelMessageSend(channelID, "You do not have permission to run this command.")
+			return
+		}
+
+		year := args[1]
+		eventCode := args[2]
+		eventStart(channelID, year, eventCode, session)
     default:
         session.ChannelMessageSend(channelID, "Unknown subcommand. Available subcommands: `info`")
     }
+}
+
+func eventStart(channelID string, args []string, session *discordgo.Session) {
+	if len(args) < 3 {
+		session.ChannelMessageSend(channelID, "Usage: `>>e start <year> <eventCode>`")
+		return
+	}
+
+	year := args[1]
+	eventCode := args[2]
+
+	getEventStart(channelID, year, eventCode, session)
 }
 
 func getMatch(ChannelID string, year string, eventCode string, matchNumber string, session *discordgo.Session) {
