@@ -57,7 +57,6 @@ func eventStart(channelID string, args []string, session *discordgo.Session) {
 	year := args[1]
 	eventCode := args[2]
 
-	getEventStart(channelID, year, eventCode, session)
 }
 
 func getMatch(ChannelID string, year string, eventCode string, matchNumber string, session *discordgo.Session) {
