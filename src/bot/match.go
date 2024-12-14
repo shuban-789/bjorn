@@ -48,15 +48,56 @@ func matchcmd(channelID string, args []string, session *discordgo.Session, guild
     }
 }
 
-func eventStart(channelID string, args []string, session *discordgo.Session) {
-	if len(args) < 3 {
-		session.ChannelMessageSend(channelID, "Usage: `>>e start <year> <eventCode>`")
-		return
+func eventStart(channelID string, year string, eventCode string, session *discordgo.Session) {
+	pollingInterval := 2 * time.Minute
+	var lastProcessedMatch int
+	var cachedMatches []struct {
+		ID int `json:"id"`
 	}
 
-	year := args[1]
-	eventCode := args[2]
+	session.ChannelMessageSend(channelID, fmt.Sprintf("Started tracking matches for event %s in %s...", eventCode, year))
 
+	for {
+		url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", year, eventCode)
+		resp, err := http.Get(url)
+		if err != nil {
+			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to fetch match data: %v", err))
+			return
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to read response: %v", err))
+			return
+		}
+
+		err = json.Unmarshal(body, &cachedMatches)
+		if err != nil {
+			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to parse match data: %v", err))
+			return
+		}
+
+		var newMatches []int
+		for _, match := range cachedMatches {
+			if match.ID > lastProcessedMatch {
+				newMatches = append(newMatches, match.ID)
+			}
+		}
+
+		if len(newMatches) > 0 {
+			for _, matchID := range newMatches {
+				session.ChannelMessageSend(channelID, fmt.Sprintf("Fetching info for Match %d...", matchID))
+				getMatch(channelID, year, eventCode, fmt.Sprintf("%d", matchID), session)
+			}
+
+			lastProcessedMatch = newMatches[len(newMatches)-1]
+		} else {
+			session.ChannelMessageSend(channelID, "No new matches found in this interval.")
+		}
+
+		time.Sleep(pollingInterval)
+	}
 }
 
 func getMatch(ChannelID string, year string, eventCode string, matchNumber string, session *discordgo.Session) {
