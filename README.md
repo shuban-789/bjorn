@@ -4,7 +4,7 @@
 
 
 **📝 Created By**
-- `@shuban-789 (12499 Gear Up)`
+- `@shuban-789 (12499 Gear Up, Lead Developer)`
 - `@aaguy-hue (22105 Runtime Terror)`
 
 **🛠️ Made With**
