@@ -4,8 +4,8 @@
 
 
 **📝 Created By**
-- `@shuban-789 (12499 Gear Up, Lead Developer)`
-- `@aaguy-hue (22105 Runtime Terror)`
+- `@shuban-789 from 12499 Gear Up` (⭐ Lead Devloper)
+- `@aaguy-hue from 22105 Runtime Terror)`
 
 **🛠️ Made With**
 - [The Go Programming Language](https://github.com/golang/go)
