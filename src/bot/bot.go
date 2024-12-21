@@ -3,6 +3,8 @@ package bot
 import (
 	"fmt"
 	"strings"
+	"time"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -32,6 +34,9 @@ func Deploy(token string) {
 }
 
 func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
+	eventPollingInterval := 2 * time.Minute
+	eventUpdate(eventPollingInterval, session)
+
 	if message.Author.ID == session.State.User.ID {
 		return
 	}
