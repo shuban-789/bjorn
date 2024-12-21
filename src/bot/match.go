@@ -12,7 +12,9 @@ import (
 )
 
 type Match struct {
-	ID int `json:"id"`
+	ID              int    `json:"id"`
+	hasBeenPlayed   bool   `json:"hasBeenPlayed"`
+	actualStartTime string `json:"actualStartTime"`
 }
 
 type EventTracked struct {
@@ -253,6 +255,9 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 		var newMatches []int
 		for _, match := range event.CachedMatches {
 			if match.ID > event.LastProcessedMatchId {
+				if !match.hasBeenPlayed {
+					break
+				}
 				newMatches = append(newMatches, match.ID)
 			}
 		}
