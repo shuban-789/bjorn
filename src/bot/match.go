@@ -1,41 +1,49 @@
 package bot
 
 import (
-	"fmt"
-	"strings"
-	"github.com/bwmarrin/discordgo"
-	"net/http"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 func matchcmd(channelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
-    if len(args) < 1 {
-        session.ChannelMessageSend(channelID, "Please provide a subcommand (e.g., 'info').")
-        return
-    }
+	if len(args) < 1 {
+		session.ChannelMessageSend(channelID, "Please provide a subcommand (e.g., 'info').")
+		return
+	}
 
-    subCommand := args[0]
+	subCommand := args[0]
 
-    switch subCommand {
-    case "info":
-        if len(args) < 4 {
-            session.ChannelMessageSend(channelID, "Usage: `>>match info <year> <eventCode> <matchNumber>`")
-            return
-        }
+	switch subCommand {
+	case "info":
+		if len(args) < 4 {
+			session.ChannelMessageSend(channelID, "Usage: `>>match info <year> <eventCode> <matchNumber>`")
+			return
+		}
 
-        year := args[1]
-        eventCode := args[2]
-        matchNumber := args[3]
+		year := args[1]
+		eventCode := args[2]
+		matchNumber := args[3]
 
-        getMatch(channelID, year, eventCode, matchNumber, session)
+		getMatch(channelID, year, eventCode, matchNumber, session)
 	case "eventstart":
 		if len(args) < 3 {
 			session.ChannelMessageSend(channelID, "Usage: `>>match eventstart <year> <eventCode>`")
 			return
 		}
 
-		if isAdmin(session, guildId, authorID) {
+		hasPerms, err := isAdmin(session, guildId, authorID)
+		if err != nil {
+			session.ChannelMessageSend(channelID, "Unable to check permissions of user.")
+			return
+		}
+
+		if hasPerms {
 			session.ChannelMessageSend(channelID, "You do not have permission to run this command.")
 			return
 		}
@@ -43,9 +51,9 @@ func matchcmd(channelID string, args []string, session *discordgo.Session, guild
 		year := args[1]
 		eventCode := args[2]
 		eventStart(channelID, year, eventCode, session)
-    default:
-        session.ChannelMessageSend(channelID, "Unknown subcommand. Available subcommands: `info`")
-    }
+	default:
+		session.ChannelMessageSend(channelID, "Unknown subcommand. Available subcommands: `info`")
+	}
 }
 
 func eventStart(channelID string, year string, eventCode string, session *discordgo.Session) {
@@ -213,7 +221,6 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 		},
 		Color: color,
 	}
-	
-	
+
 	session.ChannelMessageSendEmbed(ChannelID, embed)
 }
