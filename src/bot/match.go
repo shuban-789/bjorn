@@ -3,7 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -74,7 +74,7 @@ func eventStart(channelID string, year string, eventCode string, session *discor
 		}
 		defer resp.Body.Close()
 
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to read response: %v", err))
 			return
@@ -117,7 +117,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to read response: %v", err))
 		return
