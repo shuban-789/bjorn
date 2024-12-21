@@ -52,7 +52,7 @@ func matchcmd(channelID string, args []string, session *discordgo.Session, guild
 		eventCode := args[2]
 		eventStart(channelID, year, eventCode, session)
 	default:
-		session.ChannelMessageSend(channelID, "Unknown subcommand. Available subcommands: `info`")
+		session.ChannelMessageSend(channelID, "Unknown subcommand. Available subcommands: `info`, `eventstart`")
 	}
 }
 
@@ -73,6 +73,11 @@ func eventStart(channelID string, year string, eventCode string, session *discor
 			return
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound {
+			session.ChannelMessageSend(channelID, "That event does not exist!")
+			return
+		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
