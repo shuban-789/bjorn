@@ -268,3 +268,15 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 		}
 	}
 }
+
+func startEventUpdater(session *discordgo.Session, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				eventUpdate(interval, session)
+			}
+		}
+	}()
+}

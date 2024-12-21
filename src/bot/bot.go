@@ -30,13 +30,12 @@ func Deploy(token string) {
 	HandleErr(err)
 	fmt.Println("\033[32m[SUCCESS]\033[0m Bot is running")
 
+	startEventUpdater(session, 2*time.Minute)
+
 	select {}
 }
 
 func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
-	eventPollingInterval := 2 * time.Minute
-	eventUpdate(eventPollingInterval, session)
-
 	if message.Author.ID == session.State.User.ID {
 		return
 	}
