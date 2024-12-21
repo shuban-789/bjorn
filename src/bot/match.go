@@ -17,6 +17,10 @@ type Match struct {
 	actualStartTime string `json:"actualStartTime"`
 }
 
+func (m *Match) GetHasBeenPlayed() bool {
+    return m.hasBeenPlayed
+}
+
 type EventTracked struct {
 	Year                 string
 	EventCode            string
@@ -216,63 +220,83 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 }
 
 func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
-	for i := 0; i < len(eventsBeingTracked); i++ {
-		var event EventTracked = eventsBeingTracked[i]
+    for i := 0; i < len(eventsBeingTracked); i++ {
+        event := &eventsBeingTracked[i]
 
-		var currentTime time.Time = time.Now()
-		var notTimeElapsed bool = currentTime.Sub(event.LastUpdateTime) < apiPollTime
-		eventsBeingTracked[i].LastUpdateTime = currentTime
+        fmt.Printf("\033[33m[INFO]\033[0m Checking event: Year=%s, EventCode=%s, LastUpdateTime=%v\n",
+            event.Year, event.EventCode, event.LastUpdateTime)
 
-		if notTimeElapsed { // time hasn't yet elapsed
-			return
-		}
+        if time.Since(event.LastUpdateTime) < apiPollTime {
+            fmt.Printf("\033[33m[INFO]\033[0m Skipping update for event %s/%s (last updated %v)\n",
+                event.Year, event.EventCode, event.LastUpdateTime)
+            continue
+        }
 
-		var url string = fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", event.Year, event.EventCode)
-		resp, err := http.Get(url)
-		if err != nil {
-			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to fetch match data: %v", err))
-			return
-		}
-		defer resp.Body.Close()
+        event.LastUpdateTime = time.Now()
 
-		if resp.StatusCode == http.StatusNotFound {
-			session.ChannelMessageSend(event.UpdateChannelId, "That event does not exist!")
-			return
-		}
+        url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", event.Year, event.EventCode)
+        fmt.Printf("\033[33m[INFO]\033[0m Fetching matches from: %s\n", url)
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to read response: %v", err))
-			return
-		}
+        resp, err := http.Get(url)
+        if err != nil {
+            fmt.Printf("\033[31m[FAIL]\033[0m Failed to fetch match data for event %s/%s: %v\n",
+                event.Year, event.EventCode, err)
+            session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to fetch match data: %v", err))
+            continue
+        }
+        defer resp.Body.Close()
 
-		err = json.Unmarshal(body, &event.CachedMatches)
-		if err != nil {
-			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to parse match data: %v", err))
-			return
-		}
+        if resp.StatusCode == http.StatusNotFound {
+            fmt.Printf("\033[33m[INFO]\033[0m Event %s/%s not found!\n", event.Year, event.EventCode)
+            session.ChannelMessageSend(event.UpdateChannelId, "That event does not exist!")
+            continue
+        }
 
-		var newMatches []int
-		for _, match := range event.CachedMatches {
-			if match.ID > event.LastProcessedMatchId {
-				if !match.hasBeenPlayed {
-					break
-				}
-				newMatches = append(newMatches, match.ID)
-			}
-		}
+        body, err := io.ReadAll(resp.Body)
+        if err != nil {
+            fmt.Printf("\033[31m[FAIL]\033[0m Failed to read response for event %s/%s: %v\n",
+                event.Year, event.EventCode, err)
+            session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to read response: %v", err))
+            continue
+        }
 
-		if len(newMatches) > 0 {
-			for _, matchID := range newMatches {
-				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", matchID), session)
-			}
+        var matches []Match
+        err = json.Unmarshal(body, &matches)
+        if err != nil {
+            fmt.Printf("\033[31m[ERROR]\033[0m Failed to parse match data for event %s/%s: %v\n",
+                event.Year, event.EventCode, err)
+            session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to parse match data: %v", err))
+            continue
+        }
 
-			event.LastProcessedMatchId = newMatches[len(newMatches)-1]
-		} else {
-			fmt.Println("\033[33m[INFO]\033[0m Server fetch: No matches found in this interval")
-		}
-	}
+        fmt.Printf("\033[33m[INFO]\033[0m Matches fetched for event %s/%s: %d matches found\n",
+            event.Year, event.EventCode, len(matches))
+
+        var newMatches []Match
+        for _, match := range matches {
+            fmt.Printf("\033[33m[INFO]\033[0m Checking match: ID=%d, hasBeenPlayed=%v\n",
+                match.ID, match.GetHasBeenPlayed())
+
+            if match.ID > event.LastProcessedMatchId && match.GetHasBeenPlayed() {
+                newMatches = append(newMatches, match)
+                fmt.Printf("\033[33m[INFO]\033[0m New match to process: ID=%d\n", match.ID)
+            }
+        }
+
+        if len(newMatches) > 0 {
+            for _, match := range newMatches {
+                fmt.Printf("\033[33m[INFO]\033[0m Processing match: ID=%d\n", match.ID)
+                getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", match.ID), session)
+            }
+            event.LastProcessedMatchId = newMatches[len(newMatches)-1].ID
+            fmt.Printf("\033[33m[INFO]\033[0m Updated LastProcessedMatchId for event %s/%s: %d\n",
+                event.Year, event.EventCode, event.LastProcessedMatchId)
+        } else {
+            fmt.Println("\033[33m[INFO]\033[0m No new played matches found in this interval.")
+        }
+    }
 }
+
 
 func startEventUpdater(session *discordgo.Session, interval time.Duration) {
 	ticker := time.NewTicker(interval)
