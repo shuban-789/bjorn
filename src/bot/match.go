@@ -259,7 +259,6 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 
 		if len(newMatches) > 0 {
 			for _, matchID := range newMatches {
-				session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Fetching info for Match %d...", matchID))
 				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", matchID), session)
 			}
 
