@@ -269,7 +269,7 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 
 			event.LastProcessedMatchId = newMatches[len(newMatches)-1]
 		} else {
-			session.ChannelMessageSend(event.UpdateChannelId, "No new matches found in this interval.")
+			fmt.Println("\033[33m[INFO]\033[0m Server fetch: No matches found in this interval")
 		}
 	}
 }
