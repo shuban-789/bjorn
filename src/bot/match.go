@@ -13,12 +13,12 @@ import (
 
 type Match struct {
 	ID              int    `json:"id"`
-	hasBeenPlayed   bool   `json:"hasBeenPlayed"`
+	HasBeenPlayed   bool   `json:"hasBeenPlayed"`
 	actualStartTime string `json:"actualStartTime"`
 }
 
 func (m *Match) GetHasBeenPlayed() bool {
-    return m.hasBeenPlayed
+    return m.HasBeenPlayed
 }
 
 type EventTracked struct {
