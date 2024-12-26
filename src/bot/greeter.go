@@ -13,5 +13,28 @@ func memberJoinListener(session *discordgo.Session, event *discordgo.GuildMember
 		return
 	}
 
-	helpcmd(channel.ID, session)
+	greet(channel.ID, session)
+}
+
+func greet(ChannelID string, session *discordgo.Session) {
+	embed := &discordgo.MessageEmbed{
+		Title:       "Welcome to the San Diego FTC Discord Server!",
+		Description: "Get started with the information below",
+		Color:       0x72cfdd,
+		Fields: []*discordgo.MessageEmbedField{
+			&discordgo.MessageEmbedField{
+				Name:  "1️⃣ Assign yourself a role based on your team number",
+				Value: "Get your role by typing `>>roleme [team_id]`. If you are an SD team, we have your role :)\n",
+			},
+			&discordgo.MessageEmbedField{
+				Name:  "2️⃣ Remember to practice Gracious Professionalism",
+				Value: "The culture in this server is FIRST culture!\n",
+			},
+			&discordgo.MessageEmbedField{
+				Name:  "3️⃣ Have fun!",
+				Value: "Reach to the moderators for any help, use `>>help` to see what help I can provide\n",
+			},
+		},
+	}
+	session.ChannelMessageSendEmbed(ChannelID, embed)
 }
