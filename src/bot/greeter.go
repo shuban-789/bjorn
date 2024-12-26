@@ -23,8 +23,8 @@ func greet(ChannelID string, session *discordgo.Session) {
 		Color:       0x72cfdd,
 		Fields: []*discordgo.MessageEmbedField{
 			&discordgo.MessageEmbedField{
-				Name:  "1️⃣ Assign yourself a role based on your team number",
-				Value: "Get your role by typing `>>roleme [team_id]`. If you are an SD team, we have your role :)\n",
+				Name:  "1️⃣ Get your team's role!",
+				Value: "Get your team's role by typing `>>roleme [team_id]`. If you are an SD team, we have your team's role :)\n",
 			},
 			&discordgo.MessageEmbedField{
 				Name:  "2️⃣ Remember to practice Gracious Professionalism",
@@ -32,7 +32,7 @@ func greet(ChannelID string, session *discordgo.Session) {
 			},
 			&discordgo.MessageEmbedField{
 				Name:  "3️⃣ Have fun!",
-				Value: "Reach to the moderators for any help, use `>>help` to see what help I can provide\n",
+				Value: "Reach to the moderators for any help, use `>>help` to see what I can help you with.\n",
 			},
 		},
 	}
