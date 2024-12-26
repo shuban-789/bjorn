@@ -25,6 +25,7 @@ func Deploy(token string) {
 	HandleErr(err)
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages
 	session.AddHandler(Tree)
+	session.AddHandler(memberJoinListener)
 	err = session.Open()
 	defer session.Close()
 	HandleErr(err)
