@@ -28,11 +28,11 @@ func greet(ChannelID string, session *discordgo.Session) {
 			},
 			&discordgo.MessageEmbedField{
 				Name:  "2️⃣ Remember to practice Gracious Professionalism!",
-				Value: "The culture in this server is FIRST culture!\n",
+				Value: "We follow FIRST culture here!\n",
 			},
 			&discordgo.MessageEmbedField{
 				Name:  "3️⃣ Have fun!",
-				Value: "Reach to the moderators for any help, use `>>help` to see what I can help you with.\n",
+				Value: "Reach out to the mods for any help, use `>>help` to see what I can help you with.\n",
 			},
 		},
 	}
