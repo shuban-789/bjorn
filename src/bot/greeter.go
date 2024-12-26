@@ -24,10 +24,10 @@ func greet(ChannelID string, session *discordgo.Session) {
 		Fields: []*discordgo.MessageEmbedField{
 			&discordgo.MessageEmbedField{
 				Name:  "1️⃣ Get your team's role!",
-				Value: "Use `>>roleme [team_id]` to get your team's role. If you are an SD team, we have your team's role :)\n",
+				Value: "Use `>>roleme [team_id]` to get your team's role. If you are in a SD team, we have your team's role.\n",
 			},
 			&discordgo.MessageEmbedField{
-				Name:  "2️⃣ Remember to practice Gracious Professionalism",
+				Name:  "2️⃣ Remember to practice Gracious Professionalism!",
 				Value: "The culture in this server is FIRST culture!\n",
 			},
 			&discordgo.MessageEmbedField{
