@@ -23,7 +23,7 @@ func HandleErr(err error) bool {
 func Deploy(token string) {
 	session, err := discordgo.New("Bot " + token)
 	HandleErr(err)
-	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages
+	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMembers
 	session.AddHandler(Tree)
 	session.AddHandler(memberJoinListener)
 	err = session.Open()
