@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-RUN --mount=type=secret,id=dsc_bot_token go build -v -o /app/bjorn ./src
+RUN go build -v -o /app/bjorn ./src
 
 CMD ["./bjorn"]
