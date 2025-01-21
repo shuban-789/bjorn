@@ -2,17 +2,19 @@ package bot
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
+	"strconv"
 	"strings"
-    "crypto/sha256"
-    "encoding/hex"
+
 	"github.com/bwmarrin/discordgo"
 )
 
 func hash(ID string) string {
 	hash := sha256.Sum256([]byte(ID))
 	hashString := hex.EncodeToString(hash[:])
-    return hashString
+	return hashString
 }
 
 func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
@@ -21,22 +23,22 @@ func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guil
 		return
 	}
 
-    // shuban's blacklist code
-    blacklistFile, err := os.Open("src/bot/util/blacklist.txt")
+	// shuban's blacklist code
+	blacklistFile, err := os.Open("src/bot/util/blacklist.txt")
 	if HandleErr(err) {
 		session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't load the list of team names")
 		return
 	}
 	defer blacklistFile.Close()
 
-    blacklist := bufio.NewScanner(blacklistFile)
+	blacklist := bufio.NewScanner(blacklistFile)
 	for blacklist.Scan() {
 		ban := blacklist.Text()
-        hashedID := hash(authorID)
+		hashedID := hash(authorID)
 		if strings.Compare(ban, hashedID) == 0 {
-            session.ChannelMessageSend(ChannelID, "Sorry, but you are banned from using this command.")
-            return
-        }
+			session.ChannelMessageSend(ChannelID, "Sorry, but you are banned from using this command.")
+			return
+		}
 	}
 
 	if err := blacklist.Err(); err != nil {
@@ -120,6 +122,35 @@ func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guil
 
 		roleID = newRole.ID
 		session.ChannelMessageSend(ChannelID, "Creating a new role with name `"+roleName+"`.")
+
+		session.ChannelMessageSend(ChannelID, "Do you want to set a color for the role? If yes, please provide a hex code. If not, type `no`.")
+
+		session.AddHandlerOnce(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+			if m.Author.ID != authorID || m.ChannelID != ChannelID {
+				return
+			}
+
+			if strings.ToLower(m.Content) == "no" {
+				session.ChannelMessageSend(ChannelID, "No color set for the role.")
+				return
+			}
+
+			color, err := strconv.ParseInt(strings.TrimPrefix(m.Content, "#"), 16, 32)
+			if err != nil {
+				session.ChannelMessageSend(ChannelID, "Invalid hex code. No color set for the role.")
+				return
+			}
+
+			colorInt := int(color)
+			roleInfo.Color = &colorInt
+			_, err = session.GuildRoleEdit(guildId, roleID, roleInfo)
+			if HandleErr(err) {
+				session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't set the color for the role.")
+				return
+			}
+
+			session.ChannelMessageSend(ChannelID, "Color set for the role.")
+		})
 	}
 
 	// add role to person
