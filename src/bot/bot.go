@@ -20,7 +20,10 @@ func HandleErr(err error) bool {
 	return false
 }
 
+var inScopeToken string
+
 func Deploy(token string) {
+	inScopeToken = token
 	session, err := discordgo.New("Bot " + token)
 	HandleErr(err)
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMembers
@@ -69,6 +72,8 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 			matchcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
 		case ">>lead":
 			leadcmd(message.ChannelID, args[1:], session)
+		case ">>mech":
+			mechcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
 		default:
 			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")
 		}

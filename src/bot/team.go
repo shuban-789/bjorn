@@ -23,9 +23,9 @@ type TeamInfo struct {
 	UpdatedAt  string   `json:"updatedAt"`
 }
 
-func teamcmd(ChannelID string, args []string, session *discordgo.Session) {
+func teamcmd(channelID string, args []string, session *discordgo.Session) {
 	if len(args) < 1 {
-		session.ChannelMessageSend(ChannelID, "Please provide a team number.")
+		session.ChannelMessageSend(channelID, "Please provide a team number.")
 		return
 	}
 
@@ -34,14 +34,14 @@ func teamcmd(ChannelID string, args []string, session *discordgo.Session) {
 		subCommand := args[1]
 		switch subCommand {
 		case "stats":
-			teamStats(ChannelID, teamNumber, session)
+			teamStats(channelID, teamNumber, session)
 		case "awards":
-			teamAwards(ChannelID, teamNumber, session)
+			teamAwards(channelID, teamNumber, session)
 		default:
-			session.ChannelMessageSend(ChannelID, "Unknown subcommand. Use 'stats' or 'awards'.")
+			session.ChannelMessageSend(channelID, "Unknown subcommand. Use 'stats' or 'awards'.")
 		}
 	} else {
-		showTeamInfo(ChannelID, teamNumber, session)
+		showTeamInfo(channelID, teamNumber, session)
 	}
 }
 
@@ -68,10 +68,10 @@ func fetchTeamInfo(teamNumber string) (*TeamInfo, error) {
 }
 
 // Default FTCScout API
-func showTeamInfo(ChannelID string, teamNumber string, session *discordgo.Session) {
+func showTeamInfo(channelID string, teamNumber string, session *discordgo.Session) {
 	team, err := fetchTeamInfo(teamNumber)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Error: %v", err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
@@ -95,17 +95,17 @@ func showTeamInfo(ChannelID string, teamNumber string, session *discordgo.Sessio
 	}
 
 	// HandleErr() can't be used for client-side response
-	_, err = session.ChannelMessageSendEmbed(ChannelID, embed)
+	_, err = session.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to send embed: %v", err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send embed: %v", err))
 	}
 }
 
 // Stats FTCScout API
-func teamStats(ChannelID string, teamNumber string, session *discordgo.Session) {
+func teamStats(channelID string, teamNumber string, session *discordgo.Session) {
 	team, err := fetchTeamInfo(teamNumber)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Error: %v", err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
@@ -134,21 +134,21 @@ func teamStats(ChannelID string, teamNumber string, session *discordgo.Session) 
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/teams/%s/quick-stats", teamNumber)
 	resp, err := http.Get(url)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to fetch stats for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to fetch stats for Team %s: %v", teamNumber, err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
 		return
 	}
 
 	var stats TeamStats
 	err = json.Unmarshal(body, &stats)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to parse stats for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to parse stats for Team %s: %v", teamNumber, err))
 		return
 	}
 
@@ -186,31 +186,31 @@ func teamStats(ChannelID string, teamNumber string, session *discordgo.Session) 
 	}
 
 	// HandleErr() can't be used for client-side response
-	_, err = session.ChannelMessageSendEmbed(ChannelID, embed)
+	_, err = session.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to send embed: %v", err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send embed: %v", err))
 	}
 }
 
 // Awards FTCScout API
-func teamAwards(ChannelID string, teamNumber string, session *discordgo.Session) {
+func teamAwards(channelID string, teamNumber string, session *discordgo.Session) {
 	team, err := fetchTeamInfo(teamNumber) // Reuse fetchTeamInfo to get the team name
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Error: %v", err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/teams/%s/awards", teamNumber)
 	resp, err := http.Get(url)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to fetch awards for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to fetch awards for Team %s: %v", teamNumber, err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
 		return
 	}
 
@@ -229,7 +229,7 @@ func teamAwards(ChannelID string, teamNumber string, session *discordgo.Session)
 	var awards []TeamAward
 	err = json.Unmarshal(body, &awards)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to parse awards for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to parse awards for Team %s: %v", teamNumber, err))
 		return
 	}
 
@@ -254,8 +254,8 @@ func teamAwards(ChannelID string, teamNumber string, session *discordgo.Session)
 	}
 
 	// HandleErr() can't be used for client-side response
-	_, err = session.ChannelMessageSendEmbed(ChannelID, embed)
+	_, err = session.ChannelMessageSendEmbed(channelID, embed)
 	if err != nil {
-		session.ChannelMessageSend(ChannelID, fmt.Sprintf("Failed to send awards embed for Team %s: %v", teamNumber, err))
+		session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send awards embed for Team %s: %v", teamNumber, err))
 	}
 }
