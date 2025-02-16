@@ -34,7 +34,7 @@ func Deploy(token string) {
 	HandleErr(err)
 	fmt.Println("\033[32m[SUCCESS]\033[0m Bot is running")
 
-	startEventUpdater(session, 2*time.Minute)
+	startEventUpdater(session, 2*time.Second)
 
 	select {}
 }
