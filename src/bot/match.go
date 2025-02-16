@@ -394,7 +394,7 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 		}
 		if eventDetails.Ongoing && !event.Ongoing {
 			event.Ongoing = true
-			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Event %s/%s has started!", event.Year, event.EventCode))
+			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("The %s has started!", eventDetails.Name))
 		} else if !eventDetails.Ongoing && event.Ongoing {
 			// remove the event once it's done
 			eventsBeingTracked = append(eventsBeingTracked[:i], eventsBeingTracked[i+1:]...)
@@ -516,10 +516,10 @@ func getEventStartEndTime(eventDetails EventDetails, today time.Time, location *
 	}
 
 	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 8, 0, 0, 0, location)
-	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 5, 0, 0, 0, location)
+	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 23, 59, 0, 0, location)
 
 	// If we start after 8, set it to be scheduled in the future so it doesn't error out
-	if startTime.Year() == today.Year() && startTime.YearDay() == today.YearDay() {
+	if startTime.Year() == today.Year() && startTime.YearDay() == today.YearDay() && today.Hour() >= 8 {
 		startTime = today.Add(5 * time.Minute)
 	}
 
