@@ -16,5 +16,3 @@
 - `@aaguy-hue --> @dj_snowball`
 
 **❓ About FIRST Tech Challenge (FTC)**
-
-**Made in San Diego**
