@@ -293,6 +293,20 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 
 		event.LastUpdateTime = time.Now()
 
+		eventDetails, err := fetchEventDetails(event.Year, event.EventCode)
+		if err != nil {
+			session.ChannelMessageSend(event.UpdateChannelId, err.Error())
+			return
+		}
+		if eventDetails.Started && !event.Started {
+			event.Started = true
+			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Event %s/%s has started!", event.Year, event.EventCode))
+		} else if eventDetails.Finished {
+			// remove the event once it's done
+			eventsBeingTracked = append(eventsBeingTracked[:i], eventsBeingTracked[i+1:]...)
+			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("The %s has ended!", eventDetails.Name))
+		}
+
 		url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", event.Year, event.EventCode)
 		fmt.Printf("\033[33m[INFO]\033[0m Fetching matches from: %s\n", url)
 
