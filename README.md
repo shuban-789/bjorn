@@ -11,6 +11,10 @@
 - [The Go Programming Language](https://github.com/golang/go)
 - [discordgo](https://github.com/bwmarrin/discordgo)
 
-**Discord Contacts**
+**📱 Discord Contacts**
 - `@shuban-789 --> @shubuntu`
 - `@aaguy-hue --> @dj_snowball`
+
+**❓ About FIRST Tech Challenge (FTC)**
+
+**Made in San Diego**
