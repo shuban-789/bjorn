@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 
 	"net/http"
 	"time"
@@ -219,18 +220,22 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 		return
 	}
 
+	type TeamScoreDetail struct {
+		Total  int `json:"totalPoints"`
+		Auto   int `json:"autoPoints"`
+		TeleOp int `json:"dcPoints"` // "driver controlled"
+		Fouls  int `json:"penaltyPointsByOpp"`
+	}
+
 	var matches []struct {
 		ID     int `json:"id"`
 		Scores struct {
-			Red struct {
-				TotalPoints int `json:"totalPoints"`
-			} `json:"red"`
-			Blue struct {
-				TotalPoints int `json:"totalPoints"`
-			} `json:"blue"`
+			Red  TeamScoreDetail `json:"red"`
+			Blue TeamScoreDetail `json:"blue"`
 		} `json:"scores"`
 		Teams           []TeamDTO `json:"teams"`
 		TournamentLevel string    `json:"tournamentLevel"`
+		Series          int       `json:"series"`
 	}
 	err = json.Unmarshal(body, &matches)
 	if err != nil {
@@ -240,19 +245,23 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 
 	var selectedMatch struct {
 		Scores struct {
-			Red  int `json:"totalPoints"`
-			Blue int `json:"totalPoints"`
+			Red  TeamScoreDetail
+			Blue TeamScoreDetail
 		}
 		RedAlliance     TwoTeamAlliance
+		RedTeams        []TeamDTO
 		BlueAlliance    TwoTeamAlliance
+		BlueTeams       []TeamDTO
 		TournamentLevel string
+		ID              int
+		Series          int
 	}
 	redTeams := []TeamDTO{}
 	blueTeams := []TeamDTO{}
 	for _, match := range matches {
 		if fmt.Sprintf("%d", match.ID) == matchNumber {
-			selectedMatch.Scores.Red = match.Scores.Red.TotalPoints
-			selectedMatch.Scores.Blue = match.Scores.Blue.TotalPoints
+			selectedMatch.Scores.Red = match.Scores.Red
+			selectedMatch.Scores.Blue = match.Scores.Blue
 			for _, team := range match.Teams {
 				if team.AllianceColor == "Red" {
 					redTeams = append(redTeams, team)
@@ -262,21 +271,22 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 					// TODO: I'm going to crash out if this happens
 				}
 				selectedMatch.TournamentLevel = match.TournamentLevel
+				selectedMatch.ID = match.ID
+				selectedMatch.Series = match.Series
 			}
 			break
 		}
 	}
+	selectedMatch.RedTeams = redTeams
+	selectedMatch.BlueTeams = blueTeams
 	selectedMatch.RedAlliance = getAllianceFromTeams(redTeams)
 	selectedMatch.BlueAlliance = getAllianceFromTeams(blueTeams)
 
-	winner := "Red Alliance"
 	winnerSkib := Red
-	if selectedMatch.Scores.Blue > selectedMatch.Scores.Red {
+	if selectedMatch.Scores.Blue.Total > selectedMatch.Scores.Red.Total {
 		winnerSkib = Blue
-		winner = "Blue Alliance"
-	} else if selectedMatch.Scores.Blue == selectedMatch.Scores.Red {
+	} else if selectedMatch.Scores.Blue.Total == selectedMatch.Scores.Red.Total {
 		winnerSkib = Neither
-		winner = "Draw"
 	}
 
 	color := 0xE02C44
@@ -286,48 +296,105 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 		color = 0xE8E4EC
 	}
 
+	var matchName string
+	if selectedMatch.TournamentLevel == "Quals" {
+		matchName = fmt.Sprintf("Qualification %d", selectedMatch.ID)
+	} else if selectedMatch.TournamentLevel == "DoubleElim" {
+		matchName = fmt.Sprintf("Playoffs Match %d", selectedMatch.Series)
+	} else {
+		matchName = fmt.Sprintf("Match %d?", selectedMatch.ID)
+	}
+	useQualsTeamNaming := selectedMatch.TournamentLevel == "Quals"
+	var redAlliance strings.Builder
+	var blueAlliance strings.Builder
+	// supports if there are any number of teams (including more than 2 for some reason)
+	nTeamsRed := len(selectedMatch.RedTeams)
+	nTeamsBlue := len(selectedMatch.BlueTeams)
+	if useQualsTeamNaming {
+		for i, team := range selectedMatch.RedTeams {
+			if i > 0 {
+				if nTeamsRed > 2 {
+					redAlliance.WriteString(",")
+				}
+				if i == (nTeamsRed - 1) {
+					redAlliance.WriteString(" and ")
+				} else {
+					redAlliance.WriteString(" ")
+				}
+			}
+			redAlliance.WriteString(fmt.Sprintf("%d", team.TeamNumber))
+		}
+		for i, team := range selectedMatch.BlueTeams {
+			if i > 0 {
+				if nTeamsBlue > 2 {
+					blueAlliance.WriteString(",")
+				}
+				if i == (nTeamsBlue - 1) {
+					blueAlliance.WriteString(" and ")
+				} else {
+					blueAlliance.WriteString(" ")
+				}
+			}
+			blueAlliance.WriteString(fmt.Sprintf("%d", team.TeamNumber))
+		}
+	} else {
+		for i, team := range selectedMatch.RedTeams {
+			if i > 0 {
+				redAlliance.WriteRune('\n')
+			}
+			redAlliance.WriteString(fmt.Sprintf("%s: %d", team.AllianceRole, team.TeamNumber))
+		}
+		for i, team := range selectedMatch.BlueTeams {
+			if i > 0 {
+				blueAlliance.WriteRune('\n')
+			}
+			blueAlliance.WriteString(fmt.Sprintf("%s: %d", team.AllianceRole, team.TeamNumber))
+		}
+	}
+
+	redAlliance.WriteString("\n\n")
+	blueAlliance.WriteString("\n\n")
+
+	redAlliance.WriteString(fmt.Sprintf(
+		"**%d points",
+		selectedMatch.Scores.Red.Total,
+	))
+	if winnerSkib == Red {
+		redAlliance.WriteString(" 🏆")
+	}
+	redAlliance.WriteString(fmt.Sprintf(
+		"**\n • Auto: **%d**\n • TeleOp: **%d**\n • Fouls: **%d**",
+		selectedMatch.Scores.Red.Auto,
+		selectedMatch.Scores.Red.TeleOp,
+		selectedMatch.Scores.Red.Fouls,
+	))
+
+	blueAlliance.WriteString(fmt.Sprintf(
+		"**%d points",
+		selectedMatch.Scores.Blue.Total,
+	))
+	if winnerSkib == Blue {
+		blueAlliance.WriteString(" 🏆")
+	}
+	blueAlliance.WriteString(fmt.Sprintf(
+		"**\n • Auto: **%d**\n • TeleOp: **%d**\n • Fouls: **%d**",
+		selectedMatch.Scores.Blue.Auto,
+		selectedMatch.Scores.Blue.TeleOp,
+		selectedMatch.Scores.Blue.Fouls,
+	))
+
 	embed := &discordgo.MessageEmbed{
-		Title: fmt.Sprintf("%s Match %s Results", eventCode, matchNumber),
+		Title: fmt.Sprintf("%s %s: Results", eventCode, matchName),
 		Fields: []*discordgo.MessageEmbedField{
 			{
-				Name:   "Tournament Level",
-				Value:  selectedMatch.TournamentLevel,
-				Inline: false,
-			},
-			{
-				Name:   "Red Alliance Teams  🔴   \u200B",
-				Value:  fmt.Sprintf("%v", "Captain: "+fmt.Sprintf("%d", selectedMatch.RedAlliance.Captain)+"\nFirst Pick: "+fmt.Sprintf("%d", selectedMatch.RedAlliance.FirstPick)),
+				Name:   "Red Alliance  🔴\u200B",
+				Value:  fmt.Sprintf("%v", redAlliance.String()),
 				Inline: true,
 			},
 			{
-				Name:   "Blue Alliance Teams  🔵   \u200B",
-				Value:  fmt.Sprintf("%v", "Captain: "+fmt.Sprintf("%d", selectedMatch.BlueAlliance.Captain)+"\nFirst Pick: "+fmt.Sprintf("%d", selectedMatch.BlueAlliance.FirstPick)),
+				Name:   "Blue Alliance  🔵\u200B",
+				Value:  fmt.Sprintf("%v", blueAlliance.String()),
 				Inline: true,
-			},
-			{
-				Name:   "\u200b",
-				Value:  "",
-				Inline: false,
-			},
-			{
-				Name:   "Red Alliance Score  🔴   \u200B",
-				Value:  fmt.Sprintf("** **%d", selectedMatch.Scores.Red),
-				Inline: true,
-			},
-			{
-				Name:   "Blue Alliance Score  🔵   \u200B",
-				Value:  fmt.Sprintf("%d", selectedMatch.Scores.Blue),
-				Inline: true,
-			},
-			{
-				Name:   "\u200b",
-				Value:  "",
-				Inline: false,
-			},
-			{
-				Name:   "Winner  🏆\u200B",
-				Value:  winner,
-				Inline: false,
 			},
 		},
 		Color: color,
