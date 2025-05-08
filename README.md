@@ -4,7 +4,7 @@
 
 
 **📝 Created By**
-- `@shuban-789 from 12499 Gear Up` (lead dev)
+- `@shuban-789 from 12499 Gear Up` 
 - `@aaguy-hue from 22105 Runtime Terror`
 - `@penguinencounter from 12499 Gear Up`
 
@@ -25,6 +25,6 @@
 **📜 TODO**
 - Playoff Bracket Visualization
 
-If you know how to implement anything under TODO or would like to add a feature to TODO to implement, create a PR or contact to be added to this repo
+If you know how to implement anything under TODO or would like to add a feature to TODO to implement, create a PR or contact `@shubuntu` on discord to be added to this repo
 
 **❓ About FIRST Tech Challenge (FTC)**
