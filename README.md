@@ -22,7 +22,7 @@
 - `Deployment -> (git: @shuban-789, disc: @shubuntu)`
 - `Contributions -> (git: @shuban-789, disc: @shubuntu)`
 
-**📜 TODO **
+**📜 TODO**
 - Playoff Bracket Visualization
 
 If you know how to implement anything under TODO or would like to add a feature to TODO to implement, create a PR or contact to be added to this repo
