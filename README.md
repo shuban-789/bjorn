@@ -4,8 +4,9 @@
 
 
 **📝 Created By**
-- `@shuban-789 from 12499 Gear Up` (⭐ Lead Devloper)
+- `@shuban-789 from 12499 Gear Up` 
 - `@aaguy-hue from 22105 Runtime Terror`
+- `@penguinencounter from 12499 Gear Up`
 
 **🛠️ Made With**
 - [The Go Programming Language](https://github.com/golang/go)
@@ -14,5 +15,16 @@
 **📱 Discord Contacts**
 - `@shuban-789 --> @shubuntu`
 - `@aaguy-hue --> @dj_snowball`
+
+**❓ Who do I Contact?**
+- `Display Stuff -> (git: @shuban-789, disc: @shubuntu) || (git: @aaguy-hue, disc: @dj_snowball) || (git: @penguinencounter)`
+- `General code or API Usage -> (git: @shuban-789, disc: @shubuntu) || (git: @aaguy-hue, disc: dj_snowball)`
+- `Deployment -> (git: @shuban-789, disc: @shubuntu)`
+- `Contributions -> (git: @shuban-789, disc: @shubuntu)`
+
+**📜 TODO**
+- Playoff Bracket Visualization
+
+If you know how to implement anything under TODO or would like to add a feature to TODO to implement, create a PR or contact `@shubuntu` on discord to be added to this repo
 
 **❓ About FIRST Tech Challenge (FTC)**
