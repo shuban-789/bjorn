@@ -50,7 +50,7 @@ func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guil
 	var teamName string = ""
 
 	teamNumber := args[0]
-	file, err := os.Open("src/bot/util/2024-25.txt")
+	file, err := os.Open("src/bot/util/2025-26.txt")
 	if HandleErr(err) {
 		session.ChannelMessageSend(ChannelID, "Sorry, but I couldn't load the list of team names")
 		return

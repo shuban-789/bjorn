@@ -1,0 +1,86 @@
+4262*!*Ridgebots
+6016*!*Ironwolves
+6565*!*Mechanical Meatloaf
+9164*!*Zorrobots
+9266*!*Pyrobots
+9892*!*EngiNERDs
+13084*!*Robot Raiders
+13089*!*E T Brigade
+19743*!*Definitely Human
+22567*!*Xbots
+23676*!*Bumble Bee
+23696*!*Kinematic Flying Chickens
+24041*!*Solid State
+24111*!*Coyote CODEX
+26013*!*Bengal Bots
+26471*!*Steady State
+31139*!*Safety Hazard
+31622*!*Rayolution
+32005*!*State Machine
+32007*!*State Space
+33418*!*State Pattern
+34028*!*Monarch BOTTERlies
+3650*!*Limited Liability
+3848*!*Shockwave
+7159*!*Robo Ravens
+8606*!*RSF Intergalactic Dragons
+10793*!*Voltrons
+11285*!*PATENT PENDING
+14338*!*CAOS Robotics (Chaos)
+14968*!*Matador Mechanics
+20355*!*Keep It Simple 2
+22105*!*Runtime Terror
+23673*!*Mech-A-Mind
+24142*!*Steel Vengeance
+24664*!*RoBusted
+24730*!*Rust-eze Robotics
+26235*!*RoboGenesis
+28644*!*Colt- Robotics
+30622*!*Rebel Dolphins
+31222*!*Quantum Robotics
+31742*!*Super Mega
+31800*!*Team_FTC_SDFriends
+32689*!*MTM
+1622*!*Team Spyder
+5131*!*Pointers
+7609*!*Lions
+8097*!*Botcats
+11212*!*The Clueless
+12499*!*Gear Up
+15097*!*Python
+20422*!*Team Spyder Too
+22529*!*RoboGOATs
+23280*!*C.A.R.T
+23997*!*Catalysts
+24218*!*BurritoBots
+26637*!*Circuit Crawlers
+26852*!*Team Hope
+26982*!*Sentinel
+30556*!*Raise the Bar Robotics
+32122*!*SpyderX
+32158*!*Thousand Screws Aloose
+32210*!*INWS Engineers
+32420*!*Hot Pink Hypothesis
+32627*!*Iron Assassins
+32811*!*Pineapple Power
+4216*!*Rise of Hephaestus
+5015*!*Buffalo Wings
+6226*!*Bambusa
+8380*!*UC Robotics
+9049*!*RoboPuffs
+10809*!*Crow Force
+12778*!*Tech Empire
+14535*!*Alpacas
+18142*!*Fusion
+18263*!*HIGH VOLTAGE
+18365*!*Dapper RoboNoodles
+23321*!*Holy Calves
+24029*!*CocoNuts & Bolts
+24312*!*Engineering Gear Giants
+27600*!*Robot Revolution
+27602*!*Apex Dynamics
+31420*!*Turtles In a Box
+31862*!*SEGFAULT
+31973*!*International Robotics Squad (IRS)
+32159*!*Flight Risk
+32482*!*Tungsten Titans
