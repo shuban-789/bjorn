@@ -13,14 +13,8 @@
 - [discordgo](https://github.com/bwmarrin/discordgo)
 
 **📱 Discord Contacts**
-- @shuban-789 --> @shubuntu
-- @aaguy-hue --> @dj_snowball
-
-**❓ Who do I Contact?**
-- Display Stuff -> (git: @shuban-789, disc: @shubuntu) || (git: @aaguy-hue, disc: @dj_snowball) || (git: @penguinencounter)
-- General code or API Usage -> (git: @shuban-789, disc: @shubuntu) || (git: @aaguy-hue, disc: dj_snowball)
-- Deployment -> (git: @shuban-789, disc: @shubuntu)
-- Contributions -> (git: @shuban-789, disc: @shubuntu)
+- @shubuntu
+- @dj_snowball
 
 **📜 TODO**
 - Playoff Bracket Visualization
