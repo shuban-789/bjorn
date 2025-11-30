@@ -22,11 +22,11 @@ type TeamRank struct {
 type TeamRankSlice []TeamRank
 
 func (s TeamRankSlice) Len() int {
-	return len(s) 
+	return len(s)
 }
 
-func (s TeamRankSlice) Swap(i, j int) { 
-	s[i], s[j] = s[j], s[i] 
+func (s TeamRankSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
 
 func (s TeamRankSlice) Less(i, j int) bool {
@@ -53,25 +53,25 @@ func leadcmd(ChannelID string, args []string, session *discordgo.Session) {
 
 func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/teams", year, eventCode)
-	
+
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("\033[31m[FAIL]\033[0m Failed to fetch leaderboard: %v", err)
+		return nil, fmt.Errorf(fail("Failed to fetch leaderboard: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("\033[31m[FAIL]\033[0m API returned status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf(fail("API returned status code: %d", resp.StatusCode))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("\033[31m[FAIL]\033[0m Failed to read response: %v", err)
+		return nil, fmt.Errorf(fail("Failed to read response: %v", err))
 	}
 
 	var leaderboard []map[string]interface{}
 	if err := json.Unmarshal(body, &leaderboard); err != nil {
-		return nil, fmt.Errorf("\033[31m[FAIL]\033[0m Failed to parse JSON response: %v, body: %s", err, string(body))
+		return nil, fmt.Errorf(fail("Failed to parse JSON response: %v, body: %s", err, string(body)))
 	}
 
 	var ranks []TeamRank
@@ -108,9 +108,9 @@ func createLeaderboardEmbed(year string, eventCode string, teams []TeamRank, sta
 	}
 
 	embed := &discordgo.MessageEmbed{
-		Title:       title,
-		Color:       0x72cfdd,
-		Fields:      []*discordgo.MessageEmbedField{},
+		Title:  title,
+		Color:  0x72cfdd,
+		Fields: []*discordgo.MessageEmbedField{},
 	}
 
 	for i := start; i < end && i < len(teams); i++ {
@@ -144,10 +144,10 @@ func showLeaderboard(ChannelID string, year string, eventCode string, session *d
 
 	for i := 0; i < numEmbeds; i++ {
 		start := i * teamsPerEmbed
-		end := min((i + 1) * teamsPerEmbed, totalTeams)
+		end := min((i+1)*teamsPerEmbed, totalTeams)
 
 		embed := createLeaderboardEmbed(year, eventCode, leaderboard, start, end, i+1, numEmbeds)
-		
+
 		_, err = session.ChannelMessageSendEmbed(ChannelID, embed)
 		if err != nil {
 			errMsg := fmt.Sprintf("Failed to send embed part %d/%d: %v", i+1, numEmbeds, err)

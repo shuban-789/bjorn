@@ -13,7 +13,7 @@ import (
  */
 func HandleErr(err error) bool {
 	if err != nil {
-		fmt.Println("\033[31m[FAIL]\033[0m Error: %v", err)
+		fmt.Println(fail("Error: %v", err))
 		return true
 	}
 
@@ -26,13 +26,22 @@ func Deploy(token string) {
 	inScopeToken = token
 	session, err := discordgo.New("Bot " + token)
 	HandleErr(err)
+
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMembers
+
 	session.AddHandler(Tree)
 	session.AddHandler(memberJoinListener)
+
 	err = session.Open()
 	defer session.Close()
 	HandleErr(err)
-	fmt.Println("\033[32m[SUCCESS]\033[0m Bot is running")
+	fmt.Println(success("Bot is running"))
+
+	_, err = session.ApplicationCommandBulkOverwrite(session.State.Application.ID, "", commands)
+	if err != nil {
+		fmt.Println(fail("Cannot register commands: %v", err))
+	}
+	fmt.Println(success("Application commands registered"))
 
 	startEventUpdater(session, 2*time.Second)
 
@@ -44,35 +53,39 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		return
 	}
 
-	fmt.Printf("\033[33m[INFO]\033[0m Message Details: Content='%s', Author='%s', Channel='%s'\n",
-		message.Content, message.Author.Username, message.ChannelID)
+	fmt.Println(info("Message Details: Content='%s', Author='%s', Channel='%s'",
+		message.Content, message.Author.Username, message.ChannelID))
 
 	if strings.TrimSpace(message.Content) == "" {
-		fmt.Println("\033[33m[INFO]\033[0m Message content is empty. Ignoring.")
+		fmt.Println(info("Message content is empty. Ignoring."))
 		return
 	}
 
-	if strings.HasPrefix(message.Content, ">>") {
-		args := strings.Fields(message.Content)
+	content := strings.TrimSpace(message.Content)
+	if after, ok := strings.CutPrefix(content, cmd_prefix); ok {
+		content = after
+		args := strings.Fields(content)
 		if len(args) == 0 {
 			return
 		}
-		fmt.Printf("\033[33m[INFO]\033[0m Processing command: '%s'\n", args[0])
 
-		switch args[0] {
-		case ">>help":
+		cmd := strings.ToLower(args[0])
+		fmt.Println(info("Processing command: '%s'", cmd))
+
+		switch cmd {
+		case "help":
 			helpcmd(message.ChannelID, session)
-		case ">>ping":
+		case "ping":
 			pingcmd(message.ChannelID, session)
-		case ">>team":
+		case "team":
 			teamcmd(message.ChannelID, args[1:], session)
-		case ">>roleme":
+		case "roleme":
 			rolemeCmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
-		case ">>match":
+		case "match":
 			matchcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
-		case ">>lead":
+		case "lead":
 			leadcmd(message.ChannelID, args[1:], session)
-		case ">>mech":
+		case "mech":
 			mechcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
 		default:
 			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")

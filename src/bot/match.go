@@ -443,12 +443,12 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 	for i := 0; i < len(eventsBeingTracked); i++ {
 		event := &eventsBeingTracked[i]
 
-		fmt.Printf("\033[33m[INFO]\033[0m Checking event: Year=%s, EventCode=%s, LastUpdateTime=%v\n",
-			event.Year, event.EventCode, event.LastUpdateTime)
+		fmt.Print(info("Checking event: Year=%s, EventCode=%s, LastUpdateTime=%v\n",
+			event.Year, event.EventCode, event.LastUpdateTime))
 
 		if time.Since(event.LastUpdateTime) < apiPollTime {
-			fmt.Printf("\033[33m[INFO]\033[0m Skipping update for event %s/%s (last updated %v)\n",
-				event.Year, event.EventCode, event.LastUpdateTime)
+			fmt.Print(info("Skipping update for event %s/%s (last updated %v)\n",
+				event.Year, event.EventCode, event.LastUpdateTime))
 			continue
 		}
 
@@ -470,27 +470,27 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 		}
 
 		url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", event.Year, event.EventCode)
-		fmt.Printf("\033[33m[INFO]\033[0m Fetching matches from: %s\n", url)
+		fmt.Print(info("Fetching matches from: %s\n", url))
 
 		resp, err := http.Get(url)
 		if err != nil {
-			fmt.Printf("\033[31m[FAIL]\033[0m Failed to fetch match data for event %s/%s: %v\n",
-				event.Year, event.EventCode, err)
+			fmt.Print(fail("Failed to fetch match data for event %s/%s: %v\n",
+				event.Year, event.EventCode, err))
 			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to fetch match data: %v", err))
 			continue
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusNotFound {
-			fmt.Printf("\033[33m[INFO]\033[0m Event %s/%s not found!\n", event.Year, event.EventCode)
+			fmt.Print(info("Event %s/%s not found!\n", event.Year, event.EventCode))
 			session.ChannelMessageSend(event.UpdateChannelId, "That event does not exist!")
 			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			fmt.Printf("\033[31m[FAIL]\033[0m Failed to read response for event %s/%s: %v\n",
-				event.Year, event.EventCode, err)
+			fmt.Print(fail("Failed to read response for event %s/%s: %v\n",
+				event.Year, event.EventCode, err))
 			session.ChannelMessageSend(event.UpdateChannelId, fmt.Sprintf("Failed to read response: %v", err))
 			continue
 		}
@@ -504,30 +504,30 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 			continue
 		}
 
-		fmt.Printf("\033[33m[INFO]\033[0m Matches fetched for event %s/%s: %d matches found\n",
-			event.Year, event.EventCode, len(matches))
+		fmt.Print(info("Matches fetched for event %s/%s: %d matches found\n",
+			event.Year, event.EventCode, len(matches)))
 
 		var newMatches []Match
 		for _, match := range matches {
-			fmt.Printf("\033[33m[INFO]\033[0m Checking match: ID=%d, hasBeenPlayed=%v\n",
-				match.ID, match.GetHasBeenPlayed())
+			fmt.Print(info("Checking match: ID=%d, hasBeenPlayed=%v\n",
+				match.ID, match.GetHasBeenPlayed()))
 
 			if match.ID > event.LastProcessedMatchId && match.GetHasBeenPlayed() {
 				newMatches = append(newMatches, match)
-				fmt.Printf("\033[33m[INFO]\033[0m New match to process: ID=%d\n", match.ID)
+				fmt.Print(info("New match to process: ID=%d\n", match.ID))
 			}
 		}
 
 		if len(newMatches) > 0 {
 			for _, match := range newMatches {
-				fmt.Printf("\033[33m[INFO]\033[0m Processing match: ID=%d\n", match.ID)
+				fmt.Print(info("Processing match: ID=%d\n", match.ID))
 				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", match.ID), event, session)
 			}
 			event.LastProcessedMatchId = newMatches[len(newMatches)-1].ID
-			fmt.Printf("\033[33m[INFO]\033[0m Updated LastProcessedMatchId for event %s/%s: %d\n",
-				event.Year, event.EventCode, event.LastProcessedMatchId)
+			fmt.Print(info("Updated LastProcessedMatchId for event %s/%s: %d\n",
+				event.Year, event.EventCode, event.LastProcessedMatchId))
 		} else {
-			fmt.Println("\033[33m[INFO]\033[0m No new played matches found in this interval.")
+			fmt.Println(info("No new played matches found in this interval."))
 		}
 	}
 }
