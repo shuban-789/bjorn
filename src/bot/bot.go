@@ -2,6 +2,9 @@ package bot
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -30,6 +33,7 @@ func Deploy(token string) {
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMembers
 
 	session.AddHandler(Tree)
+	session.AddHandler(slashCommandListener)
 	session.AddHandler(memberJoinListener)
 
 	err = session.Open()
@@ -45,7 +49,26 @@ func Deploy(token string) {
 
 	startEventUpdater(session, 2*time.Second)
 
-	select {}
+	allCommands, err := session.ApplicationCommands(session.State.User.ID, "")
+	HandleErr(err)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	<-stop
+	fmt.Println(info("Shutting down bot..."))
+
+	for _, cmd := range allCommands {
+		err := session.ApplicationCommandDelete(session.State.User.ID, "", cmd.ID)
+		if err != nil {
+			log.Fatalf("Cannot delete %q command: %v", cmd.Name, err)
+		}
+	}
+}
+
+func slashCommandListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+		h(s, i)
+	}
 }
 
 func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
@@ -74,11 +97,11 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 
 		switch cmd {
 		case "help":
-			helpcmd(message.ChannelID, session)
+			helpcmd(message.ChannelID, session, nil)
 		case "ping":
-			pingcmd(message.ChannelID, session)
+			pingcmd(message.ChannelID, session, nil)
 		case "team":
-			teamcmd(message.ChannelID, args[1:], session)
+			teamcmd(message.ChannelID, args[1:], session, nil)
 		case "roleme":
 			rolemeCmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
 		case "match":

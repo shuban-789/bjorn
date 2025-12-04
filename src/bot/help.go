@@ -4,7 +4,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func helpcmd(ChannelID string, session *discordgo.Session) {
+func helpcmd(ChannelID string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	embed := &discordgo.MessageEmbed{
 		Title:       "Help",
 		Description: "List of commands",
@@ -40,5 +40,5 @@ func helpcmd(ChannelID string, session *discordgo.Session) {
 			},
 		},
 	}
-	session.ChannelMessageSendEmbed(ChannelID, embed)
+	sendEmbed(session, i, ChannelID, embed)
 }

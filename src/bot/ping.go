@@ -1,17 +1,19 @@
 package bot
 
-import ( 
+import (
+	"fmt"
+	"time"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-ping/ping"
-	"time"
-	"fmt"
 )
 
-func pingcmd(ChannelID string, session *discordgo.Session) {
+func pingcmd(ChannelID string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	target := "google.com"
 	pinger, err := ping.NewPinger(target)
 	HandleErr(err)
 
+	pinger.SetPrivileged(true)
 	pinger.Count = 1
 	pinger.Timeout = 5 * time.Second
 
@@ -19,5 +21,5 @@ func pingcmd(ChannelID string, session *discordgo.Session) {
 	HandleErr(err)
 
 	stats := pinger.Statistics()
-	session.ChannelMessageSend(ChannelID, fmt.Sprintf("🏓 Pong! %vms", stats.AvgRtt.Milliseconds()))
+	sendMessage(session, i, ChannelID, fmt.Sprintf("🏓 Pong! %vms", stats.AvgRtt.Milliseconds()))
 }
