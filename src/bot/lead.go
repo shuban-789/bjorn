@@ -40,15 +40,16 @@ func min(x, y int) int {
 	return y
 }
 
-func leadcmd(ChannelID string, args []string, session *discordgo.Session) {
+func leadcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
+	channelId := getChannelId(message, i)
 	if len(args) < 2 {
-		session.ChannelMessageSend(ChannelID, "Usage: >>lead <year> <eventCode>")
+		sendMessage(session, i, channelId, "Usage: >>lead <year> <eventCode>")
 		return
 	}
 
 	year := args[0]
 	eventCode := args[1]
-	showLeaderboard(ChannelID, year, eventCode, session)
+	showLeaderboard(channelId, i, year, eventCode, session)
 }
 
 func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
@@ -124,17 +125,17 @@ func createLeaderboardEmbed(year string, eventCode string, teams []TeamRank, sta
 	return embed
 }
 
-func showLeaderboard(ChannelID string, year string, eventCode string, session *discordgo.Session) {
+func showLeaderboard(ChannelID string, interaction *discordgo.InteractionCreate, year string, eventCode string, session *discordgo.Session) {
 	leaderboard, err := fetchLeaderBoard(year, eventCode)
 	if err != nil {
 		errMsg := fmt.Sprintf("Error fetching leaderboard: %v", err)
-		session.ChannelMessageSend(ChannelID, errMsg)
+		sendMessage(session, interaction, ChannelID, errMsg)
 		return
 	}
 
 	if len(leaderboard) == 0 {
 		msg := "No teams found in the leaderboard"
-		session.ChannelMessageSend(ChannelID, msg)
+		sendMessage(session, interaction, ChannelID, msg)
 		return
 	}
 
@@ -148,11 +149,6 @@ func showLeaderboard(ChannelID string, year string, eventCode string, session *d
 
 		embed := createLeaderboardEmbed(year, eventCode, leaderboard, start, end, i+1, numEmbeds)
 
-		_, err = session.ChannelMessageSendEmbed(ChannelID, embed)
-		if err != nil {
-			errMsg := fmt.Sprintf("Failed to send embed part %d/%d: %v", i+1, numEmbeds, err)
-			session.ChannelMessageSend(ChannelID, errMsg)
-			return
-		}
+		sendEmbed(session, interaction, ChannelID, embed)
 	}
 }

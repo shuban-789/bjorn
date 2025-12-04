@@ -23,9 +23,11 @@ type TeamInfo struct {
 	UpdatedAt  string   `json:"updatedAt"`
 }
 
-func teamcmd(channelID string, args []string, session *discordgo.Session, i *discordgo.InteractionCreate) {
+// func teamcmd(channelID string, args []string, session *discordgo.Session, i *discordgo.InteractionCreate) {
+func teamcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
+	channelID := getChannelId(message, i)
 	if len(args) < 1 {
-		session.ChannelMessageSend(channelID, "Please provide a team number.")
+		sendMessage(session, i, channelID, "Please provide a team number.")
 		return
 	}
 
@@ -34,9 +36,9 @@ func teamcmd(channelID string, args []string, session *discordgo.Session, i *dis
 		subCommand := args[1]
 		switch subCommand {
 		case "stats":
-			teamStats(channelID, teamNumber, session, i)
+				teamStats(channelID, teamNumber, session, i)
 		case "awards":
-			teamAwards(channelID, teamNumber, session, i)
+				teamAwards(channelID, teamNumber, session, i)
 		default:
 			sendMessage(session, i, channelID, "Unknown subcommand. Use 'stats' or 'awards'.")
 		}
@@ -71,7 +73,7 @@ func fetchTeamInfo(teamNumber string) (*TeamInfo, error) {
 func showTeamInfo(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber)
 	if err != nil {
-		session.ChannelMessageSend(channelID, fmt.Sprintf("Error: %v", err))
+		sendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
@@ -101,7 +103,7 @@ func showTeamInfo(channelID string, teamNumber string, session *discordgo.Sessio
 func teamStats(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber)
 	if err != nil {
-		session.ChannelMessageSend(channelID, fmt.Sprintf("Error: %v", err))
+		sendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
@@ -189,7 +191,7 @@ func teamStats(channelID string, teamNumber string, session *discordgo.Session, 
 func teamAwards(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber) // Reuse fetchTeamInfo to get the team name
 	if err != nil {
-		session.ChannelMessageSend(channelID, fmt.Sprintf("Error: %v", err))
+		sendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 

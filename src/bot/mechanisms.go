@@ -4,9 +4,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func mechcmd(channelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
+func mechcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
+	channelId := getChannelId(message, i)
+	guildId := getGuildId(message, i)
+	authorId := getAuthorId(message, i)
+
 	if len(args) > 1 {
-		session.ChannelMessageSend(channelID, "Please provide a subcommand (e.g., 'restart').")
+		sendMessage(session, i, channelId, "Please provide a subcommand (e.g., 'restart').")
 		return
 	}
 
@@ -15,29 +19,29 @@ func mechcmd(channelID string, args []string, session *discordgo.Session, guildI
 	switch subCommand {
 	case "restart":
 		if len(args) > 1 {
-			session.ChannelMessageSend(channelID, "Usage: `>>mech restart`")
+			sendMessage(session, i, channelId, "Usage: `>>mech restart`")
 			return
 		}
 
-		hasPerms, err := isAdmin(session, guildId, authorID)
+		hasPerms, err := isAdmin(session, guildId, authorId)
 		if err != nil {
-			session.ChannelMessageSend(channelID, "Unable to check permissions of user.")
+			sendMessage(session, i, channelId, "Unable to check permissions of user.")
 			return
 		}
 
 		if hasPerms {
-			session.ChannelMessageSend(channelID, "You do not have permission to run this command.")
+			sendMessage(session, i, channelId, "You do not have permission to run this command.")
 			return
 		}
 
-		restartBot(session, channelID)
+		restartBot(session, channelId, i)
 	default:
-		session.ChannelMessageSend(channelID, "Unknown subcommand. Available subcommands: `restart`")
+		sendMessage(session, i, channelId, "Unknown subcommand. Available subcommands: `restart`")
 	}
 }
 
-func restartBot(session *discordgo.Session, channelID string) {
-	session.ChannelMessageSend(channelID, "Restarting bot...")
+func restartBot(session *discordgo.Session, channelID string, i *discordgo.InteractionCreate) {
+	sendMessage(session, i, channelID, "Restarting bot...")
 	session.Close()
 	Deploy(inScopeToken)
 }

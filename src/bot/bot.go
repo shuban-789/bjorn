@@ -97,19 +97,19 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 
 		switch cmd {
 		case "help":
-			helpcmd(message.ChannelID, session, nil)
+			helpcmd(session, message, nil)
 		case "ping":
-			pingcmd(message.ChannelID, session, nil)
+			pingcmd(session, message, nil)
 		case "team":
-			teamcmd(message.ChannelID, args[1:], session, nil)
+			teamcmd(session, message, nil, args[1:])
 		case "roleme":
-			rolemeCmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
+			rolemeCmd(session, message, nil, args[1:])
 		case "match":
-			matchcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
+			matchcmd(session, message, nil, args[1:])
 		case "lead":
-			leadcmd(message.ChannelID, args[1:], session)
+			leadcmd(session, message, nil, args[1:])
 		case "mech":
-			mechcmd(message.ChannelID, args[1:], session, message.GuildID, message.Author.ID)
+			mechcmd(session, message, nil, args[1:])
 		default:
 			session.ChannelMessageSend(message.ChannelID, "Unknown command. Use `>>help` for a list of commands.")
 		}
