@@ -29,9 +29,9 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 	}
 
 	// shuban's blacklist code
-	blacklistFile, err := os.Open("src/bot/util/blacklist.txt")
-		if HandleErr(err) {
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
+	blacklistFile, err := os.Open("src/bot/data/blacklist.txt")
+	if HandleErr(err) {
+		sendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
 		return
 	}
 	defer blacklistFile.Close()
@@ -46,18 +46,18 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 		}
 	}
 
-		if err := blacklist.Err(); err != nil {
-			HandleErr(err)
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
+	if err := blacklist.Err(); err != nil {
+		HandleErr(err)
+		sendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
 		return
 	}
 
 	var teamName string = ""
 
 	teamNumber := args[0]
-	file, err := os.Open("src/bot/util/2025-26.txt")
-		if HandleErr(err) {
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
+	file, err := os.Open("src/bot/data/2025-26.txt")
+	if HandleErr(err) {
+		sendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
 		return
 	}
 	defer file.Close()
@@ -71,16 +71,16 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 		}
 	}
 
-		if err := scanner.Err(); err != nil {
-			HandleErr(err)
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
+	if err := scanner.Err(); err != nil {
+		HandleErr(err)
+		sendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
 		return
 	}
 
-		if teamName == "" {
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't find a team in San Diego with that ID competing in the INTO THE DEEP:registered: season.")
-			return
-		}
+	if teamName == "" {
+		sendMessage(session, i, ChannelID, "Sorry, but I couldn't find a team in San Diego with that ID competing in the INTO THE DEEP:registered: season.")
+		return
+	}
 
 	// plan:
 	// search for a role with the name "<team_id> <team_name>"
@@ -91,8 +91,8 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 
 	// get the roles
 	roles, err := session.GuildRoles(guildId)
-		if HandleErr(err) {
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't retrieve the roles in this server.")
+	if HandleErr(err) {
+		sendMessage(session, i, ChannelID, "Sorry, but I couldn't retrieve the roles in this server.")
 		return
 	}
 
@@ -135,14 +135,14 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 				return
 			}
 
-				if strings.ToLower(m.Content) == "no" {
-					sendMessage(session, i, ChannelID, "No color set for the role.")
+			if strings.ToLower(m.Content) == "no" {
+				sendMessage(session, i, ChannelID, "No color set for the role.")
 				return
 			}
 
 			color, err := strconv.ParseInt(strings.TrimPrefix(m.Content, "#"), 16, 32)
 			if err != nil {
-					sendMessage(session, i, ChannelID, "Invalid hex code. No color set for the role.")
+				sendMessage(session, i, ChannelID, "Invalid hex code. No color set for the role.")
 				return
 			}
 
@@ -150,11 +150,11 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 			roleInfo.Color = &colorInt
 			_, err = session.GuildRoleEdit(guildId, roleID, roleInfo)
 			if HandleErr(err) {
-					sendMessage(session, i, ChannelID, "Sorry, but I couldn't set the color for the role.")
+				sendMessage(session, i, ChannelID, "Sorry, but I couldn't set the color for the role.")
 				return
 			}
 
-					sendMessage(session, i, ChannelID, "Color set for the role.")
+			sendMessage(session, i, ChannelID, "Color set for the role.")
 		})
 	}
 
