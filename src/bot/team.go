@@ -11,28 +11,75 @@ import (
 )
 
 func init() {
-	RegisterCommand("team", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-		data := i.ApplicationCommandData()
-		var args []string
-		if len(data.Options) > 0 {
-			sub := data.Options[0]
-			subName := sub.Name
-			switch subName {
-			case "info", "stats", "awards":
-				teamID := getStringOption(sub.Options, "team_id")
-				if teamID == "" {
-					interactions.SendMessage(s, i, "", "Please provide a team number.")
+	RegisterCommand(
+		&discordgo.ApplicationCommand{
+			Name:        "team",
+			Description: "Provides information about a specific FTC team.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "info",
+					Description: "Show general team information.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "team_id",
+							Description: "The FTC team ID to look up.",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "stats",
+					Description: "Show team statistics.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "team_id",
+							Description: "The FTC team ID to look up.",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "awards",
+					Description: "Show awards for a team.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "team_id",
+							Description: "The FTC team ID to look up.",
+							Required:    true,
+						},
+					},
+				},
+			},
+		},
+		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+			data := i.ApplicationCommandData()
+			var args []string
+			if len(data.Options) > 0 {
+				sub := data.Options[0]
+				subName := sub.Name
+				switch subName {
+				case "info", "stats", "awards":
+					teamID := getStringOption(sub.Options, "team_id")
+					if teamID == "" {
+						interactions.SendMessage(s, i, "", "Please provide a team number.")
+						return
+					}
+					args = []string{teamID, subName}
+				default:
+					interactions.SendMessage(s, i, "", "Unknown subcommand for team.")
 					return
 				}
-				args = []string{teamID, subName}
-			default:
-				interactions.SendMessage(s, i, "", "Unknown subcommand for team.")
-				return
 			}
-		}
-		teamcmd(s, nil, i, args)
-	})
+			teamcmd(s, nil, i, args)
+		},
+	)
 }
 
 type TeamInfo struct {

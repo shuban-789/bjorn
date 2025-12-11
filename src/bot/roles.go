@@ -13,16 +13,30 @@ import (
 )
 
 func init() {
-	RegisterCommand("roleme", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-		data := i.ApplicationCommandData()
-		teamID := getStringOption(data.Options, "team_id")
-		if teamID == "" {
-			interactions.SendMessage(s, i, "", "Please provide a team number.")
-			return
-		}
-		rolemeCmd(s, nil, i, []string{teamID})
-	})
+	RegisterCommand(
+		&discordgo.ApplicationCommand{
+			Name:        "roleme",
+			Description: "Assigns you a role based on your team ID.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "team_id",
+					Description: "Your FTC team ID.",
+					Required:    true,
+				},
+			},
+		},
+		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+			data := i.ApplicationCommandData()
+			teamID := getStringOption(data.Options, "team_id")
+			if teamID == "" {
+				interactions.SendMessage(s, i, "", "Please provide a team number.")
+				return
+			}
+			rolemeCmd(s, nil, i, []string{teamID})
+		},
+	)
 }
 
 func hash(ID string) string {

@@ -15,37 +15,89 @@ import (
 )
 
 func init() {
-	RegisterCommand("match", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-		data := i.ApplicationCommandData()
-		if len(data.Options) == 0 {
-			interactions.SendMessage(s, i, "", "Please provide a subcommand for match.")
-			return
-		}
-		sub := data.Options[0]
-		subName := sub.Name
-		switch subName {
-		case "info":
-			year := getStringOption(sub.Options, "year")
-			eventCode := getStringOption(sub.Options, "event_code")
-			matchNumber := getStringOption(sub.Options, "match_number")
-			if year == "" || eventCode == "" || matchNumber == "" {
-				interactions.SendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
+	RegisterCommand(
+		&discordgo.ApplicationCommand{
+			Name:        "match",
+			Description: "Provides information and controls for matches.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "info",
+					Description: "Lookup information about a certain match.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "year",
+							Description: "Year of the event (e.g., 2025).",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "event_code",
+							Description: "The event code to look up.",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "match_number",
+							Description: "The match ID/number to look up.",
+							Required:    true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "eventstart",
+					Description: "Start an active match tracker for a current event.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "year",
+							Description: "Year of the event (e.g., 2025).",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "event_code",
+							Description: "The event code to track.",
+							Required:    true,
+						},
+					},
+				},
+			},
+		},
+		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+			data := i.ApplicationCommandData()
+			if len(data.Options) == 0 {
+				interactions.SendMessage(s, i, "", "Please provide a subcommand for match.")
 				return
 			}
-			matchcmd(s, nil, i, []string{"info", year, eventCode, matchNumber})
-		case "eventstart":
-			year := getStringOption(sub.Options, "year")
-			eventCode := getStringOption(sub.Options, "event_code")
-			if year == "" || eventCode == "" {
-				interactions.SendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
-				return
+			sub := data.Options[0]
+			subName := sub.Name
+			switch subName {
+			case "info":
+				year := getStringOption(sub.Options, "year")
+				eventCode := getStringOption(sub.Options, "event_code")
+				matchNumber := getStringOption(sub.Options, "match_number")
+				if year == "" || eventCode == "" || matchNumber == "" {
+					interactions.SendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
+					return
+				}
+				matchcmd(s, nil, i, []string{"info", year, eventCode, matchNumber})
+			case "eventstart":
+				year := getStringOption(sub.Options, "year")
+				eventCode := getStringOption(sub.Options, "event_code")
+				if year == "" || eventCode == "" {
+					interactions.SendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
+					return
+				}
+				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
+			default:
+				interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
 			}
-			matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
-		default:
-			interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
-		}
-	})
+		},
+	)
 }
 
 type AllianceColor int

@@ -13,17 +13,37 @@ import (
 )
 
 func init() {
-	RegisterCommand("lead", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-		data := i.ApplicationCommandData()
-		year := getStringOption(data.Options, "year")
-		eventCode := getStringOption(data.Options, "event_code")
-		if year == "" || eventCode == "" {
-			interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
-			return
-		}
-		leadcmd(s, nil, i, []string{year, eventCode})
-	})
+	RegisterCommand(
+		&discordgo.ApplicationCommand{
+			Name:        "lead",
+			Description: "Display the leaderboard for a certain event.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "year",
+					Description: "Year of the event (e.g., 2025).",
+					Required:    true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "event_code",
+					Description: "Event code to look up.",
+					Required:    true,
+				},
+			},
+		},
+		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+			data := i.ApplicationCommandData()
+			year := getStringOption(data.Options, "year")
+			eventCode := getStringOption(data.Options, "event_code")
+			if year == "" || eventCode == "" {
+				interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
+				return
+			}
+			leadcmd(s, nil, i, []string{year, eventCode})
+		},
+	)
 }
 
 type TeamStats struct {

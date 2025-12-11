@@ -6,10 +6,16 @@ import (
 )
 
 func init() {
-	RegisterCommand("help", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-		helpcmd(s, nil, i)
-	})
+	RegisterCommand(
+		&discordgo.ApplicationCommand{
+			Name:        "help",
+			Description: "Displays help information about the bot commands.",
+		},
+		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+			helpcmd(s, nil, i)
+		},
+	)
 }
 
 func helpcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate) {
