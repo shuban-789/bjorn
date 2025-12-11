@@ -442,6 +442,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	// }
 
 	_, err = session.ChannelMessageSendComplex(ChannelID, discordMsg)
+	HandleErr(err)
 }
 
 func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
@@ -553,23 +554,23 @@ func fetchEventDetails(year, eventCode string) (EventDetails, error) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s", year, eventCode)
 	resp, err := http.Get(url)
 	if err != nil {
-		return EventDetails{}, fmt.Errorf("Failed to fetch match data: %v", err)
+		return EventDetails{}, fmt.Errorf("failed to fetch match data: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return EventDetails{}, fmt.Errorf("That event does not exist!")
+		return EventDetails{}, fmt.Errorf("that event does not exist!")
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return EventDetails{}, fmt.Errorf("Failed to read response: %v", err)
+		return EventDetails{}, fmt.Errorf("failed to read response: %v", err)
 	}
 
 	var eventDetails EventDetails
 	err = json.Unmarshal(body, &eventDetails)
 	if err != nil {
-		return EventDetails{}, fmt.Errorf("Failed to parse event details: %v", err)
+		return EventDetails{}, fmt.Errorf("failed to parse event details: %v", err)
 	}
 
 	return eventDetails, nil
@@ -579,12 +580,12 @@ func getEventStartEndTime(eventDetails EventDetails, today time.Time, location *
 	layout := "2006-01-02"
 	startTime, err := time.Parse(layout, eventDetails.Start)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("Failed to parse event start time: %v", err)
+		return time.Time{}, time.Time{}, fmt.Errorf("failed to parse event start time: %v", err)
 	}
 
 	endTime, err := time.Parse(layout, eventDetails.End)
 	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("Failed to parse event end time: %v", err)
+		return time.Time{}, time.Time{}, fmt.Errorf("failed to parse event end time: %v", err)
 	}
 
 	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 8, 0, 0, 0, location)

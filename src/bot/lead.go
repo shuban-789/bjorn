@@ -59,7 +59,7 @@ func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, errors.New(fail("Failed to fetch leaderboard: %v", err))
+		return nil, errors.New(fail("failed to fetch leaderboard: %v", err))
 	}
 	defer resp.Body.Close()
 
@@ -69,12 +69,12 @@ func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.New(fail("Failed to read response: %v", err))
+		return nil, errors.New(fail("failed to read response: %v", err))
 	}
 
 	var leaderboard []map[string]interface{}
 	if err := json.Unmarshal(body, &leaderboard); err != nil {
-		return nil, errors.New(fail("Failed to parse JSON response: %v, body: %s", err, string(body)))
+		return nil, errors.New(fail("failed to parse JSON response: %v, body: %s", err, string(body)))
 	}
 
 	var ranks []TeamRank
