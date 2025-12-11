@@ -2,15 +2,38 @@ package bot
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+// cache of team number to awards, used to reduce api calls
+var awardsCache = map[int][]TeamAward{}
+var awardsCacheMu = &sync.Mutex{} // btw this is bc the functions are goroutines so we don't want race conditions
+var maxAwardsCacheSize int = 20   // I don't rlly want to use too much memory here
+var awardsPerPage int = 5         // num awards per page, I think more than 10 is too much
+
+type TeamAward struct {
+	Season       int    `json:"season"`
+	EventCode    string `json:"eventCode"`
+	TeamNumber   int    `json:"teamNumber"`
+	Type         string `json:"type"`
+	Placement    int    `json:"placement"`
+	DivisionName string `json:"divisionName"`
+	PersonName   string `json:"personName"`
+	CreatedAt    string `json:"createdAt"`
+	UpdatedAt    string `json:"updatedAt"`
+}
+
 func init() {
+	fmt.Println("Registering team command...")
 	RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "team",
@@ -80,6 +103,67 @@ func init() {
 			teamcmd(s, nil, i, args)
 		},
 	)
+
+	RegisterComponentHandler("team;awards_p", func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+		parts := strings.Split(data, "_")
+		teamNum, err1 := strconv.Atoi(parts[0])
+		pageNum, err2 := strconv.Atoi(parts[1])
+		totalPg, err3 := strconv.Atoi(parts[2])
+		if err1 != nil || err2 != nil || err3 != nil {
+			fmt.Print(errors.New(fail("Invalid pagination data! teamNum: %v, pageNum: %v, totalPg: %v", err1, err2, err3)))
+			return
+		}
+		pageNum--
+		if pageNum < 0 {
+			pageNum = 0
+		}
+		embed := updateAwardsEmbed(teamNum, pageNum, ic.Message.Embeds[0])
+		embeds := []*discordgo.MessageEmbed{embed}
+		var id_prev string = fmt.Sprintf("team;awards_p %d_%d_%d", teamNum, pageNum, totalPg)
+		var id_next string = fmt.Sprintf("team;awards_n %d_%d_%d", teamNum, pageNum, totalPg)
+		components := []discordgo.MessageComponent{
+			interactions.CreatePaginationButtons(totalPg, pageNum, id_prev, id_next),
+		}
+		s.InteractionRespond(ic.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     embeds,
+				Components: components,
+			},
+		})
+		// interactions.SendMessageComplex(s, ic, channelID, "", &components, &embeds)
+	})
+
+	RegisterComponentHandler("team;awards_n", func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+		parts := strings.Split(data, "_")
+		teamNum, err1 := strconv.Atoi(parts[0])
+		pageNum, err2 := strconv.Atoi(parts[1])
+		totalPg, err3 := strconv.Atoi(parts[2])
+		if err1 != nil || err2 != nil || err3 != nil {
+			fmt.Print(errors.New(fail("Invalid pagination data! teamNum: %v, pageNum: %v, totalPg: %v", err1, err2, err3)))
+			return
+		}
+
+		pageNum++
+		if pageNum >= totalPg {
+			pageNum = totalPg - 1
+		}
+		embed := updateAwardsEmbed(teamNum, pageNum, ic.Message.Embeds[0])
+		embeds := []*discordgo.MessageEmbed{embed}
+		var id_prev string = fmt.Sprintf("team;awards_p %d_%d_%d", teamNum, pageNum, totalPg)
+		var id_next string = fmt.Sprintf("team;awards_n %d_%d_%d", teamNum, pageNum, totalPg)
+		components := []discordgo.MessageComponent{
+			interactions.CreatePaginationButtons(totalPg, pageNum, id_prev, id_next),
+		}
+		s.InteractionRespond(ic.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     embeds,
+				Components: components,
+			},
+		})
+		// interactions.SendMessageComplex(s, ic, channelID, "", &components, &embeds)
+	})
 }
 
 type TeamInfo struct {
@@ -282,18 +366,6 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 		return
 	}
 
-	type TeamAward struct {
-		Season       int    `json:"season"`
-		EventCode    string `json:"eventCode"`
-		TeamNumber   int    `json:"teamNumber"`
-		Type         string `json:"type"`
-		Placement    int    `json:"placement"`
-		DivisionName string `json:"divisionName"`
-		PersonName   string `json:"personName"`
-		CreatedAt    string `json:"createdAt"`
-		UpdatedAt    string `json:"updatedAt"`
-	}
-
 	var awards []TeamAward
 	err = json.Unmarshal(body, &awards)
 	if err != nil {
@@ -301,26 +373,69 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 		return
 	}
 
+	totalPages := (len(awards) + awardsPerPage - 1) / awardsPerPage
+	currentPage := 0
+
+	saveAwardsToCache(team.Number, awards)
+	embed := generateAwardsEmbed(team.Number, team.Name, currentPage)
+	embeds := []*discordgo.MessageEmbed{embed}
+
+	var id_prev string = fmt.Sprintf("team;awards_p %d_%d_%d", team.Number, currentPage, totalPages)
+	var id_next string = fmt.Sprintf("team;awards_n %d_%d_%d", team.Number, currentPage, totalPages)
+
+	components := []discordgo.MessageComponent{
+		interactions.CreatePaginationButtons(totalPages, currentPage, id_prev, id_next),
+	}
+
+	interactions.SendMessageComplex(session, i, channelID, "", &components, &embeds)
+}
+
+func saveAwardsToCache(teamNumber int, awards []TeamAward) {
+	awardsCacheMu.Lock()
+	defer awardsCacheMu.Unlock()
+
+	if len(awardsCache) >= maxAwardsCacheSize {
+		// delete the first entry (I think this should be the oldest)
+		for k := range awardsCache {
+			delete(awardsCache, k)
+			break
+		}
+	}
+	awardsCache[teamNumber] = awards
+}
+
+func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
-		Title:       fmt.Sprintf("Awards for Team %d (%s)", team.Number, team.Name),
+		Title:       fmt.Sprintf("Awards for Team %d (%s)", teamNumber, teamName),
 		Description: "Here are the awards this team has received:",
 		Color:       0x72cfdd,
 	}
 
-	for _, award := range awards {
+	return updateAwardsEmbed(teamNumber, pageNumber, embed)
+}
+
+func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed) *discordgo.MessageEmbed {
+	embed.Footer = &discordgo.MessageEmbedFooter{
+		Text: fmt.Sprintf("Page %d of %d", pageNumber+1, (len(awardsCache[teamNumber])+awardsPerPage-1)/awardsPerPage),
+	}
+
+	embed.Fields = []*discordgo.MessageEmbedField{}
+
+	if awardsCache[teamNumber] == nil || len(awardsCache[teamNumber]) == 0 {
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:  "No Awards",
+			Value: "This team has not received any awards yet.",
+		})
+		return embed
+	}
+
+	// fmt.Println("Generating awards embed for team", teamNumber, "page", pageNumber)
+	// fmt.Println("Total awards:", len(awardsCache[teamNumber]))
+	for _, award := range awardsCache[teamNumber][pageNumber*awardsPerPage : min((pageNumber+1)*awardsPerPage, len(awardsCache[teamNumber]))] {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:  fmt.Sprintf("%s (%d)", award.Type, award.Season),
 			Value: fmt.Sprintf("Placement: %d\nEvent Code: %s", award.Placement, award.EventCode),
 		})
 	}
-
-	if len(awards) == 0 {
-		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:  "No Awards",
-			Value: "This team has not received any awards yet.",
-		})
-	}
-
-	// HandleErr() can't be used for client-side response
-	interactions.SendEmbed(session, i, channelID, embed)
+	return embed
 }

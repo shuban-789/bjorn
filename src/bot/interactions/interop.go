@@ -77,9 +77,10 @@ func SendMessage(session *discordgo.Session, i *discordgo.InteractionCreate, cha
 	}
 }
 
-func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, message string, components []discordgo.MessageComponent) {
+// Returns whether or not the message was sent successfully
+func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, message string, components *[]discordgo.MessageComponent, embeds *[]*discordgo.MessageEmbed) bool {
 	if i != nil {
-		_, err := session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message, Components: &components})
+		_, err := session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message, Components: components, Embeds: embeds})
 		// err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		// 	Type: discordgo.InteractionResponseChannelMessageWithSource,
 		// 	Data: &discordgo.InteractionResponseData{
@@ -89,15 +90,20 @@ func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCrea
 		if err != nil {
 			msg := fmt.Sprintf("Failed to send message: %v", err)
 			session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &msg})
+			return false
 		}
 	} else {
 		_, err := session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
 			Content:    message,
-			Components: components,
+			Components: *components,
+			Embeds:     *embeds,
 		})
 
 		if err != nil {
 			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send message: %v", err))
+			return false
 		}
 	}
+
+	return true
 }

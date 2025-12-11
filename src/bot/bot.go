@@ -11,6 +11,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+// This should be blank in production. However, it takes ~2 hours for commands
+// to propagate globally which is very cooked, so you should set this to your
+//
+//	test server's ID for testing so that commands register instantly.
+var GuildId string = "784133390131134504"
+
 /**
  * Returns true if there was an error, returns false otherwise.
  */
@@ -41,7 +47,7 @@ func Deploy(token string) {
 	HandleErr(err)
 	fmt.Println(success("Bot is running"))
 
-	_, err = session.ApplicationCommandBulkOverwrite(session.State.Application.ID, "", commands)
+	_, err = session.ApplicationCommandBulkOverwrite(session.State.Application.ID, GuildId, commands)
 	if err != nil {
 		fmt.Println(fail("Cannot register commands: %v", err))
 	}
@@ -49,7 +55,7 @@ func Deploy(token string) {
 
 	startEventUpdater(session, 2*time.Second)
 
-	allCommands, err := session.ApplicationCommands(session.State.User.ID, "")
+	allCommands, err := session.ApplicationCommands(session.State.User.ID, GuildId)
 	HandleErr(err)
 
 	stop := make(chan os.Signal, 1)
@@ -73,8 +79,15 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		}
 
 	case discordgo.InteractionMessageComponent:
-		if h, ok := componentHandlers[i.MessageComponentData().CustomID]; ok {
-			h(s, i)
+		fmt.Println(info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, i.Member.User.Username))
+		// NOTE: See src/bot/README.md for the format used in custom IDs
+		fields := strings.Fields(i.MessageComponentData().CustomID)
+		if h, ok := componentHandlers[fields[0]]; ok {
+			if len(fields) == 1 {
+				h(s, i, "")
+			} else {
+				h(s, i, fields[1])
+			}
 		}
 	}
 }
