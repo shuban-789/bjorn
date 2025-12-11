@@ -114,7 +114,7 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		}
 
 		cmd := strings.ToLower(args[0])
-		fmt.Println(info("Processing command: '%s'", cmd))
+		fmt.Println(info("Processing command: '%s' with arguments %s", cmd, args[1:]))
 
 		switch cmd {
 		case "help":

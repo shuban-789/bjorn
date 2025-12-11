@@ -88,6 +88,10 @@ func init() {
 				subName := sub.Name
 				switch subName {
 				case "info", "stats", "awards":
+					if subName == "info" {
+						subName = ""
+					}
+
 					teamID := getStringOption(sub.Options, "team_id")
 					if teamID == "" {
 						interactions.SendMessage(s, i, "", "Please provide a team number.")
@@ -188,7 +192,7 @@ func teamcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *di
 	}
 
 	teamNumber := args[0]
-	if len(args) > 1 {
+	if len(args) > 1 && args[1] != "" {
 		subCommand := args[1]
 		switch subCommand {
 		case "stats":
@@ -403,6 +407,13 @@ func saveAwardsToCache(teamNumber int, awards []TeamAward) {
 	awardsCache[teamNumber] = awards
 }
 
+func getAwardsFromCache(teamNumber int) ([]TeamAward, bool) {
+	awardsCacheMu.Lock()
+	defer awardsCacheMu.Unlock()
+	awards, exists := awardsCache[teamNumber]
+	return awards, exists
+}
+
 func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("Awards for Team %d (%s)", teamNumber, teamName),
@@ -414,13 +425,19 @@ func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *disco
 }
 
 func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed) *discordgo.MessageEmbed {
+	awards, exists := getAwardsFromCache(teamNumber)
+	if !exists {
+		fmt.Println(errors.New(fail("Awards cache miss for team %d", teamNumber)))
+		return embed
+	}
+
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: fmt.Sprintf("Page %d of %d", pageNumber+1, (len(awardsCache[teamNumber])+awardsPerPage-1)/awardsPerPage),
+		Text: fmt.Sprintf("Page %d of %d", pageNumber+1, (len(awards)+awardsPerPage-1)/awardsPerPage),
 	}
 
 	embed.Fields = []*discordgo.MessageEmbedField{}
 
-	if awardsCache[teamNumber] == nil || len(awardsCache[teamNumber]) == 0 {
+	if len(awards) == 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:  "No Awards",
 			Value: "This team has not received any awards yet.",
@@ -428,9 +445,7 @@ func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed
 		return embed
 	}
 
-	// fmt.Println("Generating awards embed for team", teamNumber, "page", pageNumber)
-	// fmt.Println("Total awards:", len(awardsCache[teamNumber]))
-	for _, award := range awardsCache[teamNumber][pageNumber*awardsPerPage : min((pageNumber+1)*awardsPerPage, len(awardsCache[teamNumber]))] {
+	for _, award := range awards[pageNumber*awardsPerPage : min((pageNumber+1)*awardsPerPage, len(awards))] {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:  fmt.Sprintf("%s (%d)", award.Type, award.Season),
 			Value: fmt.Sprintf("Placement: %d\nEvent Code: %s", award.Placement, award.EventCode),
