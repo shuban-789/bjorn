@@ -7,7 +7,10 @@ require (
 	github.com/go-ping/ping v1.1.0
 )
 
-require github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+require (
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
+)
 
 require (
 	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b // indirect

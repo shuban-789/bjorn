@@ -9,16 +9,21 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"golang.org/x/sync/singleflight"
 )
 
 // cache of team number to awards, used to reduce api calls
-var awardsCache = map[int][]TeamAward{}
-var awardsCacheMu = &sync.Mutex{} // btw this is bc the functions are goroutines so we don't want race conditions
-var maxAwardsCacheSize int = 100  // I don't rlly want to use too much memory here
-var awardsPerPage int = 5         // num awards per page, I think more than 10 is too much
+var maxAwardsCacheSize int = 100             // I don't rlly want to use too much memory here
+var awardPersistenceDuration = time.Hour * 5 // in minutes
+var awardsCache = expirable.NewLRU[int, []TeamAward](maxAwardsCacheSize, nil, awardPersistenceDuration)
+var awardsCacheMu = &sync.Mutex{}   // btw this is bc the functions are goroutines so we don't want race conditions
+var awardsFlight singleflight.Group // this stops duplicate fetches for the same team bc if two people press the button at the same time it would make two requests which is dumb
+var awardsPerPage int = 5
 
 type TeamAward struct {
 	Season       int    `json:"season"`
@@ -176,6 +181,27 @@ func fetchTeamInfo(teamNumber string) (*TeamInfo, error) {
 	return &team, nil
 }
 
+func fetchTeamAwards(teamNumber int) ([]TeamAward, error) {
+	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/teams/%d/awards", teamNumber)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch awards for Team %d: %v", teamNumber, err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response for Team %s: %v", teamNumber, err)
+	}
+
+	var awards []TeamAward
+	err = json.Unmarshal(body, &awards)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse awards for Team %s: %v", teamNumber, err)
+	}
+	return awards, nil
+}
+
 // Default FTCScout API
 func showTeamInfo(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber)
@@ -302,22 +328,7 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 		return
 	}
 
-	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/teams/%s/awards", teamNumber)
-	resp, err := http.Get(url)
-	if err != nil {
-		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to fetch awards for Team %s: %v", teamNumber, err))
-		return
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
-		return
-	}
-
-	var awards []TeamAward
-	err = json.Unmarshal(body, &awards)
+	awards, err := fetchTeamAwards(team.Number)
 	if err != nil {
 		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to parse awards for Team %s: %v", teamNumber, err))
 		return
@@ -383,22 +394,47 @@ func handleAwardsPagination(s *discordgo.Session, ic *discordgo.InteractionCreat
 func saveAwardsToCache(teamNumber int, awards []TeamAward) {
 	awardsCacheMu.Lock()
 	defer awardsCacheMu.Unlock()
-
-	if len(awardsCache) >= maxAwardsCacheSize {
-		// delete the first entry (I think this should be the oldest)
-		for k := range awardsCache {
-			delete(awardsCache, k)
-			break
-		}
-	}
-	awardsCache[teamNumber] = awards
+	awardsCache.Add(teamNumber, awards)
 }
 
-func getAwardsFromCache(teamNumber int) ([]TeamAward, bool) {
+func getAwards(teamNumber int) ([]TeamAward, bool) {
+	// gets awards from cache if exists
+	awardsCacheMu.Lock()
+	awards, exists := awardsCache.Get(teamNumber)
+	if exists {
+		awardsCacheMu.Unlock()
+		return awards, true
+	}
+	awardsCacheMu.Unlock()
+
+	// note: we let go of the lock while fetching to avoid blocking other operations
+	// also here we basically index by team num, so if it sees one team num is there it doesn't repeat the request
+	result, err, _ := awardsFlight.Do(strconv.Itoa(teamNumber), func() (any, error) {
+		return fetchTeamAwards(teamNumber)
+	})
+	if err != nil {
+		fmt.Println(fail(err.Error()))
+		return nil, false
+	}
+
+	fetchedAwards, ok := result.([]TeamAward)
+	if !ok {
+		fmt.Println(fail("Type conversion somehow failed for team %d: expected []TeamAward, got %T", teamNumber, result))
+		return nil, false
+	}
+
+	// get the lock again
 	awardsCacheMu.Lock()
 	defer awardsCacheMu.Unlock()
-	awards, exists := awardsCache[teamNumber]
-	return awards, exists
+
+	// check again if another goroutine has already cached it
+	if cached, exists := awardsCache.Get(teamNumber); exists {
+		return cached, true
+	}
+
+	// add to cache
+	awardsCache.Add(teamNumber, fetchedAwards)
+	return fetchedAwards, true
 }
 
 func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *discordgo.MessageEmbed {
@@ -412,7 +448,7 @@ func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *disco
 }
 
 func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed) *discordgo.MessageEmbed {
-	awards, exists := getAwardsFromCache(teamNumber)
+	awards, exists := getAwards(teamNumber)
 	if !exists {
 		fmt.Println(errors.New(fail("Awards cache miss for team %d", teamNumber)))
 		return embed
