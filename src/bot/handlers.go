@@ -2,7 +2,6 @@ package bot
 
 import (
 	"github.com/bwmarrin/discordgo"
-	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 var cmd_prefix = ">>"
@@ -176,116 +175,18 @@ func getStringOption(opts []*discordgo.ApplicationCommandInteractionDataOption, 
 // commandHandlers maps top-level command names to interaction handlers.
 var commandHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
 
-func init() {
-	commandHandlers = map[string]func(*discordgo.Session, *discordgo.InteractionCreate){
-		"help": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			helpcmd(s, nil, i)
-		},
-		"ping": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			pingcmd(s, nil, i)
-		},
-		"roleme": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			data := i.ApplicationCommandData()
-			teamID := getStringOption(data.Options, "team_id")
-			if teamID == "" {
-				interactions.SendMessage(s, i, "", "Please provide a team number.")
-				return
-			}
-			rolemeCmd(s, nil, i, []string{teamID})
-		},
-		"team": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			data := i.ApplicationCommandData()
-			var args []string
-			if len(data.Options) > 0 {
-				sub := data.Options[0]
-				subName := sub.Name
-				switch subName {
-				case "info", "stats", "awards":
-					teamID := getStringOption(sub.Options, "team_id")
-					if teamID == "" {
-						interactions.SendMessage(s, i, "", "Please provide a team number.")
-						return
-					}
-					args = []string{teamID, subName}
-				default:
-					interactions.SendMessage(s, i, "", "Unknown subcommand for team.")
-					return
-				}
-			}
-			teamcmd(s, nil, i, args)
-		},
-		"match": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			data := i.ApplicationCommandData()
-			if len(data.Options) == 0 {
-				interactions.SendMessage(s, i, "", "Please provide a subcommand for match.")
-				return
-			}
-			sub := data.Options[0]
-			subName := sub.Name
-			switch subName {
-			case "info":
-				year := getStringOption(sub.Options, "year")
-				eventCode := getStringOption(sub.Options, "event_code")
-				matchNumber := getStringOption(sub.Options, "match_number")
-				if year == "" || eventCode == "" || matchNumber == "" {
-					interactions.SendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
-					return
-				}
-				matchcmd(s, nil, i, []string{"info", year, eventCode, matchNumber})
-			case "eventstart":
-				year := getStringOption(sub.Options, "year")
-				eventCode := getStringOption(sub.Options, "event_code")
-				if year == "" || eventCode == "" {
-					interactions.SendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
-					return
-				}
-				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
-			default:
-				interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
-			}
-		},
-		"lead": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			data := i.ApplicationCommandData()
-			year := getStringOption(data.Options, "year")
-			eventCode := getStringOption(data.Options, "event_code")
-			if year == "" || eventCode == "" {
-				interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
-				return
-			}
-			leadcmd(s, nil, i, []string{year, eventCode})
-		},
-		"mech": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			data := i.ApplicationCommandData()
-			if len(data.Options) == 0 {
-				_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "No subcommand provided.", Flags: 1 << 6}})
-				return
-			}
-			sub := data.Options[0]
-			subName := sub.Name
+var componentHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
 
-			isAdminUser, err := isAdmin(s, i.GuildID, i.Member.User.ID)
-			if err != nil {
-				_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "Unable to check permissions.", Flags: 1 << 6}})
-				return
-			}
-			if !isAdminUser {
-				_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "You do not have permission to run this command.", Flags: 1 << 6}})
-				return
-			}
-
-			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
-			switch subName {
-			case "restart":
-				restartBot(s, i.ChannelID, i)
-			default:
-				interactions.SendMessage(s, i, "", "Unknown mech subcommand.")
-			}
-		},
+func RegisterCommand(name string, handler func(*discordgo.Session, *discordgo.InteractionCreate)) {
+	if commandHandlers == nil {
+		commandHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate))
 	}
+	commandHandlers[name] = handler
+}
+
+func RegisterComponentHandler(customID string, handler func(*discordgo.Session, *discordgo.InteractionCreate)) {
+	if componentHandlers == nil {
+		componentHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate))
+	}
+	componentHandlers[customID] = handler
 }

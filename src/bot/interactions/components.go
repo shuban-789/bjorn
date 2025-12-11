@@ -3,7 +3,4 @@
 
 package interactions
 
-// import (
-// 	"fmt"
-// 	"github.com/bwmarrin/discordgo"
-// )
+// this might be redundant since I just added it into interop.go, I'm thinking of turning this into a class for registering component handlers later

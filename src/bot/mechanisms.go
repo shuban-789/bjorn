@@ -5,6 +5,36 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+func init() {
+	RegisterCommand("mech", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		data := i.ApplicationCommandData()
+		if len(data.Options) == 0 {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "No subcommand provided.", Flags: 1 << 6}})
+			return
+		}
+		sub := data.Options[0]
+		subName := sub.Name
+
+		isAdminUser, err := isAdmin(s, i.GuildID, i.Member.User.ID)
+		if err != nil {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "Unable to check permissions.", Flags: 1 << 6}})
+			return
+		}
+		if !isAdminUser {
+			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "You do not have permission to run this command.", Flags: 1 << 6}})
+			return
+		}
+
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+		switch subName {
+		case "restart":
+			restartBot(s, i.ChannelID, i)
+		default:
+			interactions.SendMessage(s, i, "", "Unknown mech subcommand.")
+		}
+	})
+}
+
 func mechcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
 	channelId := interactions.GetChannelId(message, i)
 	guildId := interactions.GetGuildId(message, i)

@@ -33,7 +33,7 @@ func Deploy(token string) {
 	session.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsGuildMembers
 
 	session.AddHandler(Tree)
-	session.AddHandler(slashCommandListener)
+	session.AddHandler(interactionCreateHandler)
 	session.AddHandler(memberJoinListener)
 
 	err = session.Open()
@@ -65,9 +65,17 @@ func Deploy(token string) {
 	}
 }
 
-func slashCommandListener(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
-		h(s, i)
+func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	switch i.Type {
+	case discordgo.InteractionApplicationCommand:
+		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+			h(s, i)
+		}
+
+	case discordgo.InteractionMessageComponent:
+		if h, ok := componentHandlers[i.MessageComponentData().CustomID]; ok {
+			h(s, i)
+		}
 	}
 }
 

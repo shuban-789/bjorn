@@ -12,6 +12,20 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+func init() {
+	RegisterCommand("lead", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+		data := i.ApplicationCommandData()
+		year := getStringOption(data.Options, "year")
+		eventCode := getStringOption(data.Options, "event_code")
+		if year == "" || eventCode == "" {
+			interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
+			return
+		}
+		leadcmd(s, nil, i, []string{year, eventCode})
+	})
+}
+
 type TeamStats struct {
 	Rank int `json:"rank"`
 }

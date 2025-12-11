@@ -76,3 +76,28 @@ func SendMessage(session *discordgo.Session, i *discordgo.InteractionCreate, cha
 		}
 	}
 }
+
+func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, message string, components []discordgo.MessageComponent) {
+	if i != nil {
+		_, err := session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message, Components: &components})
+		// err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		// 	Type: discordgo.InteractionResponseChannelMessageWithSource,
+		// 	Data: &discordgo.InteractionResponseData{
+		// 		Content: message,
+		// 	},
+		// })
+		if err != nil {
+			msg := fmt.Sprintf("Failed to send message: %v", err)
+			session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &msg})
+		}
+	} else {
+		_, err := session.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+			Content:    message,
+			Components: components,
+		})
+
+		if err != nil {
+			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send message: %v", err))
+		}
+	}
+}

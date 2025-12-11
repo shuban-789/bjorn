@@ -12,6 +12,19 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+func init() {
+	RegisterCommand("roleme", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+		data := i.ApplicationCommandData()
+		teamID := getStringOption(data.Options, "team_id")
+		if teamID == "" {
+			interactions.SendMessage(s, i, "", "Please provide a team number.")
+			return
+		}
+		rolemeCmd(s, nil, i, []string{teamID})
+	})
+}
+
 func hash(ID string) string {
 	hash := sha256.Sum256([]byte(ID))
 	hashString := hex.EncodeToString(hash[:])

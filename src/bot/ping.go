@@ -9,6 +9,13 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+func init() {
+	RegisterCommand("ping", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+		pingcmd(s, nil, i)
+	})
+}
+
 func pingcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate) {
 	target := "google.com"
 	pinger, err := ping.NewPinger(target)

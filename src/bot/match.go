@@ -14,6 +14,40 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+func init() {
+	RegisterCommand("match", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+		data := i.ApplicationCommandData()
+		if len(data.Options) == 0 {
+			interactions.SendMessage(s, i, "", "Please provide a subcommand for match.")
+			return
+		}
+		sub := data.Options[0]
+		subName := sub.Name
+		switch subName {
+		case "info":
+			year := getStringOption(sub.Options, "year")
+			eventCode := getStringOption(sub.Options, "event_code")
+			matchNumber := getStringOption(sub.Options, "match_number")
+			if year == "" || eventCode == "" || matchNumber == "" {
+				interactions.SendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
+				return
+			}
+			matchcmd(s, nil, i, []string{"info", year, eventCode, matchNumber})
+		case "eventstart":
+			year := getStringOption(sub.Options, "year")
+			eventCode := getStringOption(sub.Options, "event_code")
+			if year == "" || eventCode == "" {
+				interactions.SendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
+				return
+			}
+			matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
+		default:
+			interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
+		}
+	})
+}
+
 type AllianceColor int
 
 const (

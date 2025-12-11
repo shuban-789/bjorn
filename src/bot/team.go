@@ -10,6 +10,31 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
+func init() {
+	RegisterCommand("team", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+		data := i.ApplicationCommandData()
+		var args []string
+		if len(data.Options) > 0 {
+			sub := data.Options[0]
+			subName := sub.Name
+			switch subName {
+			case "info", "stats", "awards":
+				teamID := getStringOption(sub.Options, "team_id")
+				if teamID == "" {
+					interactions.SendMessage(s, i, "", "Please provide a team number.")
+					return
+				}
+				args = []string{teamID, subName}
+			default:
+				interactions.SendMessage(s, i, "", "Unknown subcommand for team.")
+				return
+			}
+		}
+		teamcmd(s, nil, i, args)
+	})
+}
+
 type TeamInfo struct {
 	Number     int      `json:"number"`
 	Name       string   `json:"name"`
