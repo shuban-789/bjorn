@@ -2,10 +2,11 @@ package bot
 
 import (
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 func helpcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate) {
-	channelID := getChannelId(message, i)
+	channelID := interactions.GetChannelId(message, i)
 
 	embed := &discordgo.MessageEmbed{
 		Title:       "Help",
@@ -42,5 +43,5 @@ func helpcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *di
 			},
 		},
 	}
-	sendEmbed(session, i, channelID, embed)
+	interactions.SendEmbed(session, i, channelID, embed)
 }

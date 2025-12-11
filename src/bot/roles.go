@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 func hash(ID string) string {
@@ -19,19 +20,19 @@ func hash(ID string) string {
 
 // func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
 func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
-	ChannelID := getChannelId(message, i)
-	guildId := getGuildId(message, i)
-	authorID := getAuthorId(message, i)
+	ChannelID := interactions.GetChannelId(message, i)
+	guildId := interactions.GetGuildId(message, i)
+	authorID := interactions.GetAuthorId(message, i)
 
 	if len(args) != 1 {
-		sendMessage(session, i, ChannelID, "Please provide a team number, and nothing more.")
+		interactions.SendMessage(session, i, ChannelID, "Please provide a team number, and nothing more.")
 		return
 	}
 
 	// shuban's blacklist code
 	blacklistFile, err := os.Open("src/bot/data/blacklist.txt")
 	if HandleErr(err) {
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
 		return
 	}
 	defer blacklistFile.Close()
@@ -48,7 +49,7 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 
 	if err := blacklist.Err(); err != nil {
 		HandleErr(err)
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
 		return
 	}
 
@@ -57,7 +58,7 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 	teamNumber := args[0]
 	file, err := os.Open("src/bot/data/2025-26.txt")
 	if HandleErr(err) {
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
 		return
 	}
 	defer file.Close()
@@ -73,12 +74,12 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 
 	if err := scanner.Err(); err != nil {
 		HandleErr(err)
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
 		return
 	}
 
 	if teamName == "" {
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't find a team in San Diego with that ID competing in the INTO THE DEEP:registered: season.")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't find a team in San Diego with that ID competing in the INTO THE DEEP:registered: season.")
 		return
 	}
 
@@ -92,7 +93,7 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 	// get the roles
 	roles, err := session.GuildRoles(guildId)
 	if HandleErr(err) {
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't retrieve the roles in this server.")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't retrieve the roles in this server.")
 		return
 	}
 
@@ -121,14 +122,14 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 
 		newRole, err := session.GuildRoleCreate(guildId, roleInfo)
 		if HandleErr(err) {
-			sendMessage(session, i, ChannelID, "Sorry, but I couldn't create a new role.")
+			interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't create a new role.")
 			return
 		}
 
 		roleID = newRole.ID
-		sendMessage(session, i, ChannelID, "Creating a new role with name `"+roleName+"`.")
+		interactions.SendMessage(session, i, ChannelID, "Creating a new role with name `"+roleName+"`.")
 
-		sendMessage(session, i, ChannelID, "Do you want to set a color for the role? If yes, please provide a hex code. If not, type `no`.")
+		interactions.SendMessage(session, i, ChannelID, "Do you want to set a color for the role? If yes, please provide a hex code. If not, type `no`.")
 
 		session.AddHandlerOnce(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if m.Author.ID != authorID || m.ChannelID != ChannelID {
@@ -136,13 +137,13 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 			}
 
 			if strings.ToLower(m.Content) == "no" {
-				sendMessage(session, i, ChannelID, "No color set for the role.")
+				interactions.SendMessage(session, i, ChannelID, "No color set for the role.")
 				return
 			}
 
 			color, err := strconv.ParseInt(strings.TrimPrefix(m.Content, "#"), 16, 32)
 			if err != nil {
-				sendMessage(session, i, ChannelID, "Invalid hex code. No color set for the role.")
+				interactions.SendMessage(session, i, ChannelID, "Invalid hex code. No color set for the role.")
 				return
 			}
 
@@ -150,20 +151,20 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 			roleInfo.Color = &colorInt
 			_, err = session.GuildRoleEdit(guildId, roleID, roleInfo)
 			if HandleErr(err) {
-				sendMessage(session, i, ChannelID, "Sorry, but I couldn't set the color for the role.")
+				interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't set the color for the role.")
 				return
 			}
 
-			sendMessage(session, i, ChannelID, "Color set for the role.")
+			interactions.SendMessage(session, i, ChannelID, "Color set for the role.")
 		})
 	}
 
 	// add role to person
 	err = session.GuildMemberRoleAdd(guildId, authorID, roleID)
 	if HandleErr(err) {
-		sendMessage(session, i, ChannelID, "Sorry, but I couldn't assign the role to you.")
+		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't assign the role to you.")
 		return
 	}
 
-	sendMessage(session, i, ChannelID, "You have been given the `"+roleName+"` role!")
+	interactions.SendMessage(session, i, ChannelID, "You have been given the `"+roleName+"` role!")
 }

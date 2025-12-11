@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 type AllianceColor int
@@ -92,12 +93,12 @@ type TeamDTO struct {
 }
 
 func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
-	authorId := getAuthorId(message, i)
-	guildId := getGuildId(message, i)
-	channelId := getChannelId(message, i)
+	authorId := interactions.GetAuthorId(message, i)
+	guildId := interactions.GetGuildId(message, i)
+	channelId := interactions.GetChannelId(message, i)
 
 	if len(args) < 1 {
-		sendMessage(session, i, channelId, "Please provide a subcommand (e.g., 'info').")
+		interactions.SendMessage(session, i, channelId, "Please provide a subcommand (e.g., 'info').")
 		return
 	}
 
@@ -106,7 +107,7 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 	switch subCommand {
 	case "info":
 		if len(args) < 4 {
-			sendMessage(session, i, channelId, "Usage: `>>match info <year> <eventCode> <matchNumber>`")
+			interactions.SendMessage(session, i, channelId, "Usage: `>>match info <year> <eventCode> <matchNumber>`")
 			return
 		}
 
@@ -117,18 +118,18 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 		getMatch(channelId, year, eventCode, matchNumber, nil, session)
 	case "eventstart":
 		if len(args) < 3 {
-			sendMessage(session, i, channelId, "Usage: `>>match eventstart <year> <eventCode>`")
+			interactions.SendMessage(session, i, channelId, "Usage: `>>match eventstart <year> <eventCode>`")
 			return
 		}
 
 		hasPerms, err := isAdmin(session, guildId, authorId)
 		if err != nil {
-			sendMessage(session, i, channelId, "Unable to check permissions of user.")
+			interactions.SendMessage(session, i, channelId, "Unable to check permissions of user.")
 			return
 		}
 
 		if hasPerms {
-			sendMessage(session, i, channelId, "You do not have permission to run this command.")
+			interactions.SendMessage(session, i, channelId, "You do not have permission to run this command.")
 			return
 		}
 
@@ -136,32 +137,32 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 		eventCode := args[2]
 		eventStart(channelId, guildId, year, eventCode, session, i)
 	default:
-		sendMessage(session, i, channelId, "Unknown subcommand. Available subcommands: `info`, `eventstart`")
+		interactions.SendMessage(session, i, channelId, "Unknown subcommand. Available subcommands: `info`, `eventstart`")
 	}
 }
 
 func eventStart(channelID, guildID, year, eventCode string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	eventDetails, err := fetchEventDetails(year, eventCode)
 	if err != nil {
-		sendMessage(session, i, channelID, err.Error())
+		interactions.SendMessage(session, i, channelID, err.Error())
 		return
 	}
 
 	location, err := time.LoadLocation(eventDetails.TimeZone)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Error loading event timezone: %v", err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Error loading event timezone: %v", err))
 		return
 	}
 
 	today := time.Now().In(location)
 	startTime, endTime, err := getEventStartEndTime(eventDetails, today, location)
 	if err != nil {
-		sendMessage(session, i, channelID, err.Error())
+		interactions.SendMessage(session, i, channelID, err.Error())
 		return
 	}
 
 	if endTime.Before(today) {
-		sendMessage(session, i, channelID, "This event has already ended!")
+		interactions.SendMessage(session, i, channelID, "This event has already ended!")
 		return
 	}
 
@@ -184,10 +185,10 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 			Eliminated:     make(map[TwoTeamAlliance]bool),
 		},
 	})
-	sendMessage(session, i, channelID, fmt.Sprintf("Started tracking matches for event %s in %s...", eventCode, year))
+	interactions.SendMessage(session, i, channelID, fmt.Sprintf("Started tracking matches for event %s in %s...", eventCode, year))
 
 	if startTime.Before(today) {
-		sendMessage(session, i, channelID, "This event has already started! Will not create event.")
+		interactions.SendMessage(session, i, channelID, "This event has already started! Will not create event.")
 		return
 	}
 
@@ -206,21 +207,21 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 	if err != nil {
 		log.Fatalf("Error creating event: %v", err)
 	}
-	sendMessage(session, i, channelID, fmt.Sprintf("Created event: %s", event.ID))
+	interactions.SendMessage(session, i, channelID, fmt.Sprintf("Created event: %s", event.ID))
 }
 
 func getMatch(ChannelID string, year string, eventCode string, matchNumber string, event *EventTracked, session *discordgo.Session) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", year, eventCode)
 	resp, err := http.Get(url)
 	if err != nil {
-		sendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to fetch match data: %v", err))
+		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to fetch match data: %v", err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		sendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to read response: %v", err))
+		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to read response: %v", err))
 		return
 	}
 
@@ -243,7 +244,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	}
 	err = json.Unmarshal(body, &matches)
 	if err != nil {
-		sendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to parse match data: %v", err))
+		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to parse match data: %v", err))
 		return
 	}
 
@@ -428,7 +429,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	// 	var buf bytes.Buffer
 	// 	err := png.Encode(&buf, image)
 	// 	if err != nil {
-	// 		sendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to encode image: %v", err))
+	// 		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to encode image: %v", err))
 	// 		return
 	// 	}
 

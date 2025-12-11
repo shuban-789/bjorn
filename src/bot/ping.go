@@ -6,6 +6,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/go-ping/ping"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 func pingcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate) {
@@ -21,6 +22,6 @@ func pingcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *di
 	HandleErr(err)
 
 	stats := pinger.Statistics()
-	channelID := getChannelId(message, i)
-	sendMessage(session, i, channelID, fmt.Sprintf("🏓 Pong! %vms", stats.AvgRtt.Milliseconds()))
+	channelID := interactions.GetChannelId(message, i)
+	interactions.SendMessage(session, i, channelID, fmt.Sprintf("🏓 Pong! %vms", stats.AvgRtt.Milliseconds()))
 }

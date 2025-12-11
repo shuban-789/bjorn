@@ -2,12 +2,14 @@ package bot
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"sort"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 type TeamStats struct {
@@ -41,9 +43,9 @@ func min(x, y int) int {
 }
 
 func leadcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
-	channelId := getChannelId(message, i)
+	channelId := interactions.GetChannelId(message, i)
 	if len(args) < 2 {
-		sendMessage(session, i, channelId, "Usage: >>lead <year> <eventCode>")
+		interactions.SendMessage(session, i, channelId, "Usage: >>lead <year> <eventCode>")
 		return
 	}
 
@@ -57,22 +59,22 @@ func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf(fail("Failed to fetch leaderboard: %v", err))
+		return nil, errors.New(fail("Failed to fetch leaderboard: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(fail("API returned status code: %d", resp.StatusCode))
+		return nil, errors.New(fail("API returned status code: %d", resp.StatusCode))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf(fail("Failed to read response: %v", err))
+		return nil, errors.New(fail("Failed to read response: %v", err))
 	}
 
 	var leaderboard []map[string]interface{}
 	if err := json.Unmarshal(body, &leaderboard); err != nil {
-		return nil, fmt.Errorf(fail("Failed to parse JSON response: %v, body: %s", err, string(body)))
+		return nil, errors.New(fail("Failed to parse JSON response: %v, body: %s", err, string(body)))
 	}
 
 	var ranks []TeamRank
@@ -129,13 +131,13 @@ func showLeaderboard(ChannelID string, interaction *discordgo.InteractionCreate,
 	leaderboard, err := fetchLeaderBoard(year, eventCode)
 	if err != nil {
 		errMsg := fmt.Sprintf("Error fetching leaderboard: %v", err)
-		sendMessage(session, interaction, ChannelID, errMsg)
+		interactions.SendMessage(session, interaction, ChannelID, errMsg)
 		return
 	}
 
 	if len(leaderboard) == 0 {
 		msg := "No teams found in the leaderboard"
-		sendMessage(session, interaction, ChannelID, msg)
+		interactions.SendMessage(session, interaction, ChannelID, msg)
 		return
 	}
 
@@ -149,6 +151,6 @@ func showLeaderboard(ChannelID string, interaction *discordgo.InteractionCreate,
 
 		embed := createLeaderboardEmbed(year, eventCode, leaderboard, start, end, i+1, numEmbeds)
 
-		sendEmbed(session, interaction, ChannelID, embed)
+		interactions.SendEmbed(session, interaction, ChannelID, embed)
 	}
 }

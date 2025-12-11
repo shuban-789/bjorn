@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 type TeamInfo struct {
@@ -25,9 +26,9 @@ type TeamInfo struct {
 
 // func teamcmd(channelID string, args []string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 func teamcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
-	channelID := getChannelId(message, i)
+	channelID := interactions.GetChannelId(message, i)
 	if len(args) < 1 {
-		sendMessage(session, i, channelID, "Please provide a team number.")
+		interactions.SendMessage(session, i, channelID, "Please provide a team number.")
 		return
 	}
 
@@ -36,11 +37,11 @@ func teamcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *di
 		subCommand := args[1]
 		switch subCommand {
 		case "stats":
-				teamStats(channelID, teamNumber, session, i)
+			teamStats(channelID, teamNumber, session, i)
 		case "awards":
-				teamAwards(channelID, teamNumber, session, i)
+			teamAwards(channelID, teamNumber, session, i)
 		default:
-			sendMessage(session, i, channelID, "Unknown subcommand. Use 'stats' or 'awards'.")
+			interactions.SendMessage(session, i, channelID, "Unknown subcommand. Use 'stats' or 'awards'.")
 		}
 	} else {
 		showTeamInfo(channelID, teamNumber, session, i)
@@ -73,7 +74,7 @@ func fetchTeamInfo(teamNumber string) (*TeamInfo, error) {
 func showTeamInfo(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
@@ -96,14 +97,14 @@ func showTeamInfo(channelID string, teamNumber string, session *discordgo.Sessio
 		},
 	}
 
-	sendEmbed(session, i, channelID, embed)
+	interactions.SendEmbed(session, i, channelID, embed)
 }
 
 // Stats FTCScout API
 func teamStats(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
@@ -132,21 +133,21 @@ func teamStats(channelID string, teamNumber string, session *discordgo.Session, 
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/teams/%s/quick-stats", teamNumber)
 	resp, err := http.Get(url)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Failed to fetch stats for Team %s: %v", teamNumber, err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to fetch stats for Team %s: %v", teamNumber, err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
 		return
 	}
 
 	var stats TeamStats
 	err = json.Unmarshal(body, &stats)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Failed to parse stats for Team %s: %v", teamNumber, err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to parse stats for Team %s: %v", teamNumber, err))
 		return
 	}
 
@@ -184,28 +185,28 @@ func teamStats(channelID string, teamNumber string, session *discordgo.Session, 
 	}
 
 	// HandleErr() can't be used for client-side response
-	sendEmbed(session, i, channelID, embed)
+	interactions.SendEmbed(session, i, channelID, embed)
 }
 
 // Awards FTCScout API
 func teamAwards(channelID string, teamNumber string, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	team, err := fetchTeamInfo(teamNumber) // Reuse fetchTeamInfo to get the team name
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
 
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/teams/%s/awards", teamNumber)
 	resp, err := http.Get(url)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Failed to fetch awards for Team %s: %v", teamNumber, err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to fetch awards for Team %s: %v", teamNumber, err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to read response for Team %s: %v", teamNumber, err))
 		return
 	}
 
@@ -224,7 +225,7 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 	var awards []TeamAward
 	err = json.Unmarshal(body, &awards)
 	if err != nil {
-		sendMessage(session, i, channelID, fmt.Sprintf("Failed to parse awards for Team %s: %v", teamNumber, err))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to parse awards for Team %s: %v", teamNumber, err))
 		return
 	}
 
@@ -249,5 +250,5 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 	}
 
 	// HandleErr() can't be used for client-side response
-	sendEmbed(session, i, channelID, embed)
+	interactions.SendEmbed(session, i, channelID, embed)
 }

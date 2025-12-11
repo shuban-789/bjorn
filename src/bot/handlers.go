@@ -1,9 +1,8 @@
 package bot
 
 import (
-	"fmt"
-
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 )
 
 var cmd_prefix = ">>"
@@ -192,7 +191,7 @@ func init() {
 			data := i.ApplicationCommandData()
 			teamID := getStringOption(data.Options, "team_id")
 			if teamID == "" {
-				sendMessage(s, i, "", "Please provide a team number.")
+				interactions.SendMessage(s, i, "", "Please provide a team number.")
 				return
 			}
 			rolemeCmd(s, nil, i, []string{teamID})
@@ -208,12 +207,12 @@ func init() {
 				case "info", "stats", "awards":
 					teamID := getStringOption(sub.Options, "team_id")
 					if teamID == "" {
-						sendMessage(s, i, "", "Please provide a team number.")
+						interactions.SendMessage(s, i, "", "Please provide a team number.")
 						return
 					}
 					args = []string{teamID, subName}
 				default:
-					sendMessage(s, i, "", "Unknown subcommand for team.")
+					interactions.SendMessage(s, i, "", "Unknown subcommand for team.")
 					return
 				}
 			}
@@ -223,7 +222,7 @@ func init() {
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
 			data := i.ApplicationCommandData()
 			if len(data.Options) == 0 {
-				sendMessage(s, i, "", "Please provide a subcommand for match.")
+				interactions.SendMessage(s, i, "", "Please provide a subcommand for match.")
 				return
 			}
 			sub := data.Options[0]
@@ -234,7 +233,7 @@ func init() {
 				eventCode := getStringOption(sub.Options, "event_code")
 				matchNumber := getStringOption(sub.Options, "match_number")
 				if year == "" || eventCode == "" || matchNumber == "" {
-					sendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
+					interactions.SendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
 					return
 				}
 				matchcmd(s, nil, i, []string{"info", year, eventCode, matchNumber})
@@ -242,12 +241,12 @@ func init() {
 				year := getStringOption(sub.Options, "year")
 				eventCode := getStringOption(sub.Options, "event_code")
 				if year == "" || eventCode == "" {
-					sendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
+					interactions.SendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
 					return
 				}
 				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
 			default:
-				sendMessage(s, i, "", "Unknown subcommand for match.")
+				interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
 			}
 		},
 		"lead": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -256,7 +255,7 @@ func init() {
 			year := getStringOption(data.Options, "year")
 			eventCode := getStringOption(data.Options, "event_code")
 			if year == "" || eventCode == "" {
-				sendMessage(s, i, "", "Usage: /lead <year> <event_code>")
+				interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
 				return
 			}
 			leadcmd(s, nil, i, []string{year, eventCode})
@@ -285,76 +284,8 @@ func init() {
 			case "restart":
 				restartBot(s, i.ChannelID, i)
 			default:
-				sendMessage(s, i, "", "Unknown mech subcommand.")
+				interactions.SendMessage(s, i, "", "Unknown mech subcommand.")
 			}
 		},
 	}
-}
-
-func sendEmbed(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, embed *discordgo.MessageEmbed) {
-	if i != nil {
-		_, err := session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Embeds: &[]*discordgo.MessageEmbed{embed}})
-
-		if err != nil {
-			msg := fmt.Sprintf("Failed to send embed: %v", err)
-			session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &msg})
-		}
-	} else {
-		_, err := session.ChannelMessageSendEmbed(channelID, embed)
-
-		if err != nil {
-			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send embed: %v", err))
-		}
-	}
-}
-
-func sendMessage(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, message string) {
-	if i != nil {
-		_, err := session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message})
-		// err := session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		// 	Type: discordgo.InteractionResponseChannelMessageWithSource,
-		// 	Data: &discordgo.InteractionResponseData{
-		// 		Content: message,
-		// 	},
-		// })
-		if err != nil {
-			msg := fmt.Sprintf("Failed to send message: %v", err)
-			session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &msg})
-		}
-	} else {
-		_, err := session.ChannelMessageSend(channelID, message)
-		if err != nil {
-			session.ChannelMessageSend(channelID, fmt.Sprintf("Failed to send message: %v", err))
-		}
-	}
-}
-
-func getGuildId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) string {
-	if i != nil {
-		return i.GuildID
-	}
-	if message != nil {
-		return message.GuildID
-	}
-	panic("Both message and interaction are nil in getGuildId")
-}
-
-func getAuthorId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) string {
-	if i != nil {
-		return i.Member.User.ID
-	}
-	if message != nil {
-		return message.Author.ID
-	}
-	panic("Both message and interaction are nil in getAuthorId")
-}
-
-func getChannelId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) string {
-	if i != nil {
-		return i.ChannelID
-	}
-	if message != nil {
-		return message.ChannelID
-	}
-	panic("Both message and interaction are nil in getChannelId")
 }
