@@ -191,13 +191,13 @@ func fetchTeamAwards(teamNumber int) ([]TeamAward, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response for Team %s: %v", teamNumber, err)
+		return nil, fmt.Errorf("failed to read response for Team %d: %v", teamNumber, err)
 	}
 
 	var awards []TeamAward
 	err = json.Unmarshal(body, &awards)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse awards for Team %s: %v", teamNumber, err)
+		return nil, fmt.Errorf("failed to parse awards for Team %d: %v", teamNumber, err)
 	}
 	return awards, nil
 }
