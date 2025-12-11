@@ -33,7 +33,6 @@ type TeamAward struct {
 }
 
 func init() {
-	fmt.Println("Registering team command...")
 	RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "team",
