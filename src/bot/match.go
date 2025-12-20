@@ -82,6 +82,13 @@ func init() {
 							Required:    true,
 							Autocomplete: true,
 						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "name",
+							Description: "The name of the event.",
+							Required:    true,
+							Autocomplete: true,
+						},
 					},
 				},
 			},
@@ -132,6 +139,7 @@ func init() {
 		if subName != "eventstart2" {
 			return
 		}
+
 		if sub.Options[1].Focused && sub.Options[1].Name == "region" {
 			regionQuery := sub.Options[1].Value.(string)
 
@@ -153,6 +161,20 @@ func init() {
 				},
 			})
 		}
+
+		if sub.Options[1].Focused && sub.Options[1].Name == "name" {
+			regionName := getStringOption(sub.Options, "region")
+			eventNameQuery := sub.Options[2].Value.(string)
+			regionCode := GetRegionCodeFromName(regionName)
+			if regionCode == "" {
+				// todo: I'm not sure if I need to respond with no suggestions or smth or if it's ok to do nothing
+				return
+			}
+
+			// todo: implement this
+			fmt.Println(eventNameQuery)
+		}
+
 	})
 }
 
