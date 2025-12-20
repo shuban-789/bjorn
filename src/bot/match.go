@@ -64,6 +64,26 @@ func init() {
 						},
 					},
 				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "eventstart2",
+					Description: "Start an active match tracker for a current event.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "year",
+							Description: "Year of the event (e.g., 2025).",
+							Required:    true,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "region",
+							Description: "The region the event took/takes place in.",
+							Required:    true,
+							Autocomplete: true,
+						},
+					},
+				},
 			},
 		},
 		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -98,6 +118,42 @@ func init() {
 			}
 		},
 	)
+
+	RegisterAutocompleteHandler("match", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		data := i.ApplicationCommandData()
+		
+		if len(data.Options) == 0 {
+			return
+		}
+		fmt.Printf("app command autocomplete data: %+v\n", data)
+
+		sub := data.Options[0]
+		subName := sub.Name
+		if subName != "eventstart2" {
+			return
+		}
+		if sub.Options[1].Focused && sub.Options[1].Name == "region" {
+			regionQuery := sub.Options[1].Value.(string)
+
+			// discord only allows up to 25 suggestions btw
+			resultRegions := SearchRegionNames(regionQuery, 25)
+
+			suggestions := make([]*discordgo.ApplicationCommandOptionChoice, 0)
+			for _, regionName := range resultRegions {
+				suggestions = append(suggestions, &discordgo.ApplicationCommandOptionChoice{
+					Name:  regionName,
+					Value: regionName,
+				})
+			}
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+				Data: &discordgo.InteractionResponseData{
+					Choices: suggestions,
+				},
+			})
+		}
+	})
 }
 
 type AllianceColor int

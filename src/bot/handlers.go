@@ -12,6 +12,8 @@ var commands []*discordgo.ApplicationCommand
 // commandHandlers maps top-level command names to interaction handlers.
 var commandHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
 
+var autocompleteHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
+
 var componentHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate, string)
 
 func RegisterCommand(cmd *discordgo.ApplicationCommand, handler func(*discordgo.Session, *discordgo.InteractionCreate)) {
@@ -20,6 +22,13 @@ func RegisterCommand(cmd *discordgo.ApplicationCommand, handler func(*discordgo.
 	}
 	commands = append(commands, cmd)
 	commandHandlers[cmd.Name] = handler
+}
+
+func RegisterAutocompleteHandler(cmdName string, handler func(*discordgo.Session, *discordgo.InteractionCreate)) {
+	if autocompleteHandlers == nil {
+		autocompleteHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate))
+	}
+	autocompleteHandlers[cmdName] = handler
 }
 
 func RegisterComponentHandler(customID string, handler func(*discordgo.Session, *discordgo.InteractionCreate, string)) {
