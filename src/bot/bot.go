@@ -15,7 +15,7 @@ import (
 // to propagate globally which is very cooked, so you should set this to your
 //
 //	test server's ID for testing so that commands register instantly.
-var GuildId string = ""
+var GuildId string = os.Getenv("GUILD_ID")
 
 /**
  * Returns true if there was an error, returns false otherwise.
