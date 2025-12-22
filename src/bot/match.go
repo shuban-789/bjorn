@@ -74,6 +74,15 @@ func init() {
 							Name:        "year",
 							Description: "Year of the event (e.g., 2025).",
 							Required:    true,
+							Choices: []*discordgo.ApplicationCommandOptionChoice{
+								{Name:  "2025", Value: "2025"},
+								{Name:  "2024", Value: "2024"},
+								{Name:  "2023", Value: "2023"},
+								{Name:  "2022", Value: "2022"},
+								{Name:  "2021", Value: "2021"},
+								{Name:  "2020", Value: "2020"},
+								{Name:  "2019", Value: "2019"},
+							},
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
@@ -139,8 +148,12 @@ func init() {
 		if subName != "eventstart2" {
 			return
 		}
-
-		if sub.Options[1].Focused && sub.Options[1].Name == "region" {
+		
+		for i := range sub.Options {
+			fmt.Printf("option %d: %+v\n", i, sub.Options[i])
+		}
+		
+		if len(sub.Options) >= 2 && sub.Options[1].Focused && sub.Options[1].Name == "region" {
 			regionQuery := sub.Options[1].Value.(string)
 
 			// discord only allows up to 25 suggestions btw
@@ -162,7 +175,7 @@ func init() {
 			})
 		}
 
-		if sub.Options[1].Focused && sub.Options[1].Name == "name" {
+		if len(sub.Options) >= 3 && sub.Options[2].Focused && sub.Options[2].Name == "name" {
 			regionName := getStringOption(sub.Options, "region")
 			eventNameQuery := sub.Options[2].Value.(string)
 			regionCode := GetRegionCodeFromName(regionName)
