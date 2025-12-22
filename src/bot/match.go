@@ -143,7 +143,7 @@ func init() {
 		if len(data.Options) == 0 {
 			return
 		}
-		fmt.Printf("app command autocomplete data: %+v\n", data)
+		fmt.Printf("match command autocomplete data: %+v\n", data)
 
 		sub := data.Options[0]
 		subName := sub.Name

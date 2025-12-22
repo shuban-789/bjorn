@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/search"
+	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
 func init() {
@@ -20,16 +23,17 @@ func init() {
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "team_id",
-					Description: "Your FTC team ID.",
+					Name:        "team",
+					Description: "Your FTC team.",
 					Required:    true,
+					Autocomplete: true,
 				},
 			},
 		},
 		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
 			data := i.ApplicationCommandData()
-			teamID := getStringOption(data.Options, "team_id")
+			teamID := getStringOption(data.Options, "team")
 			if teamID == "" {
 				interactions.SendMessage(s, i, "", "Please provide a team number.")
 				return
@@ -37,6 +41,40 @@ func init() {
 			rolemeCmd(s, nil, i, []string{teamID})
 		},
 	)
+
+	RegisterAutocompleteHandler("roleme", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		data := i.ApplicationCommandData()
+
+		if len(data.Options) == 0 {
+			return
+		}
+		fmt.Printf("roleme command autocomplete data: %+v\n", data)
+		
+		if !data.Options[0].Focused { return }
+
+		teamQuery := data.Options[0].Value.(string)
+		fmt.Printf("roleme autocomplete query: %s\n", teamQuery)
+		results, err := search.SearchSDTeamNames(teamQuery, 25)
+		if err != nil {
+			fmt.Println(util.Fail("Error searching team names: %v", err))
+			return
+		}
+
+		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
+		for _, team := range results {
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  fmt.Sprintf("%s %s", team.TeamID, team.Name),
+				Value: team.TeamID,
+			})
+		}
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+			Data: &discordgo.InteractionResponseData{
+				Choices: choices,
+			},
+		})
+		return
+	})
 }
 
 func hash(ID string) string {
@@ -80,36 +118,17 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 		return
 	}
 
-	var teamName string = ""
-
 	teamNumber := args[0]
-	file, err := os.Open("src/bot/data/2025-26.txt")
-	if HandleErr(err) {
-		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't load the list of team names")
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		splitted := strings.Split(line, "*!*")
-		if splitted[0] == teamNumber {
-			teamName = splitted[1]
+	teamName, err := search.GetSDTeamNameFromNumber(teamNumber)
+	if err != nil {
+		if err.Error() == "team number not found" {
+			interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't find a team in San Diego with that ID competing in the DECODE:registered: season.")
+		} else {
+			interactions.SendMessage(session, i, ChannelID, "Sorry, an error occurred while searching for your team: "+err.Error())
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		HandleErr(err)
-		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't read the list of team names")
 		return
 	}
-
-	if teamName == "" {
-		interactions.SendMessage(session, i, ChannelID, "Sorry, but I couldn't find a team in San Diego with that ID competing in the INTO THE DEEP:registered: season.")
-		return
-	}
-
+	
 	// plan:
 	// search for a role with the name "<team_id> <team_name>"
 	// if that role exists, add it to the user
