@@ -40,23 +40,24 @@ type EventData struct {
 
 type EventInfo struct {
 	Code 	 string
-	Name     EventName
+	Name string
+	Tokens []string // preprocess tokens for quick searching
 	Region   RegionInfo
 }
 
-type EventName struct {
-	Name string
-	Tokens []string // preprocess tokens for quick searching
+func (e EventInfo) GetSearchTokens() []string {
+	return e.Tokens;
 }
 
-var cachedEventData map[*RegionInfo]EventInfo = nil
+var cachedEventData map[string][]EventInfo = nil
 var lastEventDataFetch time.Time
 
-func FetchEvents() map[*RegionInfo]EventInfo {
+func FetchEvents() map[string][]EventInfo {
 	if cachedEventData != nil && time.Since(lastEventDataFetch) < 24*time.Hour {
 		return cachedEventData
 	}
 	
+	fmt.Println(info("Fetching events data from API..."))
 	api := "https://api.ftcscout.org/rest/v1/events/search/2025"
 
 	resp, err := http.Get(api)
@@ -83,7 +84,7 @@ func FetchEvents() map[*RegionInfo]EventInfo {
 		return nil
 	}
 
-	cachedEventData = make(map[*RegionInfo]EventInfo)
+	cachedEventData = make(map[string][]EventInfo)
 	for _, event := range events {
 		regionCode := event.RegionCode
 		regionInfo := RegionInfo{
@@ -93,19 +94,48 @@ func FetchEvents() map[*RegionInfo]EventInfo {
 		if regionInfo.Code == "" {
 			continue
 		}
-		cachedEventData[&regionInfo] = EventInfo{
+		cachedEventData[regionInfo.Code] = append(cachedEventData[regionInfo.Code], EventInfo{
 			Code: event.Code,
-			Name: EventName{
-				Name: event.Name,
-				Tokens: util.GenerateNormalizedTokens(event.Name),
-			},
+			Name: event.Name,
+			Tokens: util.GenerateNormalizedTokens(event.Name),
 			Region: regionInfo,
-		}
+		})
 	}
 	lastEventDataFetch = time.Now()
 	return cachedEventData
 }
 
-func GetEventsData() map[*RegionInfo]EventInfo{
+func startEventFetcher() {
+	go func() {
+		for {
+			FetchEvents()
+			fmt.Println(info("Event data refreshed"))
+			time.Sleep(24 * time.Hour)
+		}
+	}();
+}
+
+func GetEventsData() map[string][]EventInfo{
 	return cachedEventData
+}
+
+func SearchEventNames(query string, maxResults int, regionCode string) []EventInfo {
+	eventsMap := GetEventsData()
+	events := eventsMap[regionCode]
+	return util.TokenizedSearch(events, query, maxResults)
+}
+
+func GetEventCodeFromName(name string, regionCode string) (code string, ok bool) {
+	eventsMap := GetEventsData()
+	events := eventsMap[regionCode]
+	for _, event := range events {
+		if event.Name == name {
+			return event.Code, true
+		}
+	}
+	return "", false
+}
+
+func init() {
+	startEventFetcher()
 }

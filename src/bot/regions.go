@@ -10,22 +10,22 @@ import (
 
 type RegionInfo struct {
 	Code 	 string
-	Name     RegionName
-}
-
-type RegionName struct {
 	Name string
 	Tokens []string // preprocess tokens for quick searching
 }
 
-func (r RegionName) GetSearchTokens() []string {
+func (r RegionInfo) GetName() string {
+	return r.Name
+}
+
+func (r RegionInfo) GetSearchTokens() []string {
 	return r.Tokens
 }
 
 // regions contains all the info in regionNames and regionCodes too, but we still keep
 // those slices for easy access without having to loop through the structs each time.
 var regions []RegionInfo = nil
-var regionNames []RegionName = nil
+var regionNames []string = nil
 var regionCodes []string = nil
 
 func GetRegionsData() []RegionInfo {
@@ -50,10 +50,8 @@ func GetRegionsData() []RegionInfo {
 		}
 		regions = append(regions, RegionInfo{
 			Code: line[0],
-			Name: RegionName{
-				Name: line[1],
-				Tokens: util.GenerateNormalizedTokens(line[1]),
-			},
+			Name: line[1],
+			Tokens: util.GenerateNormalizedTokens(line[1]),
 		})
 	}
 	return regions
@@ -73,20 +71,20 @@ func GetRegionName(code string) string {
 	regions := GetRegionsData()
 	for _, region := range regions {
 		if region.Code == code {
-			return region.Name.Name
+			return region.Name
 		}
 	}
 	return ""
 }
 
-func GetRegionFromCode(code string) RegionName {
+func GetRegionFromCode(code string) string {
 	regions := GetRegionsData()
 	for _, region := range regions {
 		if region.Code == code {
 			return region.Name
 		}
 	}
-	return RegionName{}
+	return ""
 }
 
 func GetAllRegionCodes() []string {
@@ -104,14 +102,13 @@ func GetAllRegionCodes() []string {
 	return regionCodes
 }
 
-func GetAllRegionNames() []RegionName {
+func GetAllRegionNames() []string {
 	if regionNames != nil {
 		return regionNames
 	}
 
 	regions := GetRegionsData()
-	names := make([]RegionName, 0, len(regions))
-
+	names := make([]string, 0, len(regions))
 	for _, region := range regions {
 		names = append(names, region.Name)
 	}
@@ -122,7 +119,7 @@ func GetAllRegionNames() []RegionName {
 func GetRegionCodeFromName(name string) string {
 	regions := GetRegionsData()
 	for _, region := range regions {
-		if region.Name.Name == name {
+		if region.Name == name {
 			return region.Code
 		}
 	}
@@ -132,15 +129,8 @@ func GetRegionCodeFromName(name string) string {
 
 // note: basically what I do here is just give a score to each region, then return the top n matches
 // set maxResults to -1 to get all matches
-func SearchRegionNames(query string, maxResults int) []string {
-	names := GetAllRegionNames()
-	results := util.TokenizedSearch(names, query, maxResults)
-
-	var namesReturned []string = make([]string, 0, len(names))
-	for _, res := range results {
-		namesReturned = append(namesReturned, res.Name)
-	}
-	return namesReturned
+func SearchRegionNames(query string, maxResults int) []RegionInfo {
+	return util.TokenizedSearch(regions, query, maxResults)
 }
 
 func init() {

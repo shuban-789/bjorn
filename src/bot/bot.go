@@ -53,7 +53,7 @@ func Deploy(token string) {
 	}
 	fmt.Println(success("Application commands registered"))
 
-	startEventUpdater(session, 2*time.Second)
+	startMatchEventUpdater(session, 2*time.Second)
 
 	allCommands, err := session.ApplicationCommands(session.State.User.ID, GuildId)
 	HandleErr(err)

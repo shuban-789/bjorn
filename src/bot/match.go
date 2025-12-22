@@ -160,10 +160,10 @@ func init() {
 			resultRegions := SearchRegionNames(regionQuery, 25)
 
 			suggestions := make([]*discordgo.ApplicationCommandOptionChoice, 0)
-			for _, regionName := range resultRegions {
+			for _, region := range resultRegions {
 				suggestions = append(suggestions, &discordgo.ApplicationCommandOptionChoice{
-					Name:  regionName,
-					Value: regionName,
+					Name:  region.Name,
+					Value: region.Code,
 				})
 			}
 
@@ -173,19 +173,33 @@ func init() {
 					Choices: suggestions,
 				},
 			})
+			return
 		}
 
 		if len(sub.Options) >= 3 && sub.Options[2].Focused && sub.Options[2].Name == "name" {
-			regionName := getStringOption(sub.Options, "region")
+			regionCode := getStringOption(sub.Options, "region")
 			eventNameQuery := sub.Options[2].Value.(string)
-			regionCode := GetRegionCodeFromName(regionName)
 			if regionCode == "" {
 				// todo: I'm not sure if I need to respond with no suggestions or smth or if it's ok to do nothing
 				return
 			}
 
-			// todo: implement this
-			fmt.Println(eventNameQuery)
+			var results []EventInfo = SearchEventNames(eventNameQuery, 25, regionCode)
+			
+			suggestions := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
+			for _, event := range results {
+				suggestions = append(suggestions, &discordgo.ApplicationCommandOptionChoice{
+					Name:  event.Name,
+					Value: event.Code,
+				})
+			}
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+				Data: &discordgo.InteractionResponseData{
+					Choices: suggestions,
+				},
+			})
+			return
 		}
 
 	})
@@ -715,7 +729,7 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 	}
 }
 
-func startEventUpdater(session *discordgo.Session, interval time.Duration) {
+func startMatchEventUpdater(session *discordgo.Session, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
 		for {
