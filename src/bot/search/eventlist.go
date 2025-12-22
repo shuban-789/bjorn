@@ -1,7 +1,7 @@
 // this functions similar to regions.go, but instead of being a hardcoded list,
 // it fetches the data from the API and caches it in memory.
 // it does this once every day.
-package bot
+package search
 
 import (
 	"encoding/json"
@@ -57,30 +57,30 @@ func FetchEvents() map[string][]EventInfo {
 		return cachedEventData
 	}
 	
-	fmt.Println(info("Fetching events data from API..."))
+	fmt.Println(util.Info("Fetching events data from API..."))
 	api := "https://api.ftcscout.org/rest/v1/events/search/2025"
 
 	resp, err := http.Get(api)
 	if err != nil {
-		fmt.Println(fail("Failed to fetch events data from API: %v", err))
+		fmt.Println(util.Fail("Failed to fetch events data from API: %v", err))
 		return nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println(fail("Events API returned status code: %d", resp.StatusCode))
+		fmt.Println(util.Fail("Events API returned status code: %d", resp.StatusCode))
 		return nil
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println(fail("Failed to read events response body: %v", err))
+		fmt.Println(util.Fail("Failed to read events response body: %v", err))
 		return nil
 	}
 
 	var events []EventData
 	if err := json.Unmarshal(body, &events); err != nil {
-		fmt.Println(fail("Failed to parse events JSON response: %v", err))
+		fmt.Println(util.Fail("Failed to parse events JSON response: %v", err))
 		return nil
 	}
 
@@ -109,7 +109,7 @@ func startEventFetcher() {
 	go func() {
 		for {
 			FetchEvents()
-			fmt.Println(info("Event data refreshed"))
+			fmt.Println(util.Info("Event data refreshed"))
 			time.Sleep(24 * time.Hour)
 		}
 	}();

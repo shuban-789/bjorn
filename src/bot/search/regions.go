@@ -1,4 +1,4 @@
-package bot
+package search
 
 import (
 	"encoding/csv"
@@ -34,14 +34,14 @@ func GetRegionsData() []RegionInfo {
 	}
 	file, err := os.Open("src/bot/data/regions.csv")
 	if err != nil {
-		fmt.Println(fail("Failed to open regions data file: %v", err))
+		fmt.Println(util.Fail("Failed to open regions data file: %v", err))
 	}
 	defer file.Close()
 
 	reader := csv.NewReader(file)
 	lines, err := reader.ReadAll()
 	if err != nil {
-		fmt.Println(fail("Failed to read regions data file via csv reader: %v", err))
+		fmt.Println(util.Fail("Failed to read regions data file via csv reader: %v", err))
 	}
 
 	for _, line := range lines {

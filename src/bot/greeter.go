@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
 func memberJoinListener(session *discordgo.Session, event *discordgo.GuildMemberAdd) {
-	fmt.Println(info("New member joined: %s", event.User.Username))
+	fmt.Println(util.Info("New member joined: %s", event.User.Username))
 	channel, err := session.UserChannelCreate(event.User.ID)
 	if err != nil {
-		fmt.Println(fail("Failed to create DM channel: %v", err))
+		fmt.Println(util.Fail("Failed to create DM channel: %v", err))
 		return
 	}
 

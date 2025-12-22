@@ -10,6 +10,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
 func init() {
@@ -93,22 +94,22 @@ func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, errors.New(fail("failed to fetch leaderboard: %v", err))
+		return nil, errors.New(util.Fail("failed to fetch leaderboard: %v", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(fail("API returned status code: %d", resp.StatusCode))
+		return nil, errors.New(util.Fail("API returned status code: %d", resp.StatusCode))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.New(fail("failed to read response: %v", err))
+		return nil, errors.New(util.Fail("failed to read response: %v", err))
 	}
 
 	var leaderboard []map[string]interface{}
 	if err := json.Unmarshal(body, &leaderboard); err != nil {
-		return nil, errors.New(fail("failed to parse JSON response: %v, body: %s", err, string(body)))
+		return nil, errors.New(util.Fail("failed to parse JSON response: %v, body: %s", err, string(body)))
 	}
 
 	var ranks []TeamRank

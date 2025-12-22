@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/util"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -354,7 +355,7 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 func handleAwardsPagination(s *discordgo.Session, ic *discordgo.InteractionCreate, data string, delta int) {
 	parts := strings.Split(data, "_")
 	if len(parts) != 3 {
-		fmt.Print(errors.New(fail("Invalid pagination data format: %v", data)))
+		fmt.Print(errors.New(util.Fail("Invalid pagination data format: %v", data)))
 		return
 	}
 
@@ -362,7 +363,7 @@ func handleAwardsPagination(s *discordgo.Session, ic *discordgo.InteractionCreat
 	pageNum, err2 := strconv.Atoi(parts[1])
 	totalPg, err3 := strconv.Atoi(parts[2])
 	if err1 != nil || err2 != nil || err3 != nil {
-		fmt.Print(errors.New(fail("Invalid pagination data! teamNum: %v, pageNum: %v, totalPg: %v", err1, err2, err3)))
+		fmt.Print(errors.New(util.Fail("Invalid pagination data! teamNum: %v, pageNum: %v, totalPg: %v", err1, err2, err3)))
 		return
 	}
 
@@ -413,13 +414,13 @@ func getAwards(teamNumber int) ([]TeamAward, bool) {
 		return fetchTeamAwards(teamNumber)
 	})
 	if err != nil {
-		fmt.Println(fail(err.Error()))
+		fmt.Println(util.Fail(err.Error()))
 		return nil, false
 	}
 
 	fetchedAwards, ok := result.([]TeamAward)
 	if !ok {
-		fmt.Println(fail("Type conversion somehow failed for team %d: expected []TeamAward, got %T", teamNumber, result))
+		fmt.Println(util.Fail("Type conversion somehow failed for team %d: expected []TeamAward, got %T", teamNumber, result))
 		return nil, false
 	}
 
@@ -450,7 +451,7 @@ func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *disco
 func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed) *discordgo.MessageEmbed {
 	awards, exists := getAwards(teamNumber)
 	if !exists {
-		fmt.Println(errors.New(fail("Awards cache miss for team %d", teamNumber)))
+		fmt.Println(errors.New(util.Fail("Awards cache miss for team %d", teamNumber)))
 		return embed
 	}
 

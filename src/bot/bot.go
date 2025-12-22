@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
 // This should be blank in production. However, it takes ~2 hours for commands
@@ -22,7 +23,7 @@ var GuildId string = os.Getenv("GUILD_ID")
  */
 func HandleErr(err error) bool {
 	if err != nil {
-		fmt.Println(fail("Error: %v", err))
+		fmt.Println(util.Fail("Error: %v", err))
 		return true
 	}
 
@@ -45,13 +46,13 @@ func Deploy(token string) {
 	err = session.Open()
 	defer session.Close()
 	HandleErr(err)
-	fmt.Println(success("Bot is running"))
+	fmt.Println(util.Success("Bot is running"))
 
 	_, err = session.ApplicationCommandBulkOverwrite(session.State.Application.ID, GuildId, commands)
 	if err != nil {
-		fmt.Println(fail("Cannot register commands: %v", err))
+		fmt.Println(util.Fail("Cannot register commands: %v", err))
 	}
-	fmt.Println(success("Application commands registered"))
+	fmt.Println(util.Success("Application commands registered"))
 
 	startMatchEventUpdater(session, 2*time.Second)
 
@@ -61,7 +62,7 @@ func Deploy(token string) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	<-stop
-	fmt.Println(info("Shutting down bot..."))
+	fmt.Println(util.Info("Shutting down bot..."))
 
 	for _, cmd := range allCommands {
 		err := session.ApplicationCommandDelete(session.State.User.ID, "", cmd.ID)
@@ -84,7 +85,7 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		}
 
 	case discordgo.InteractionMessageComponent:
-		fmt.Println(info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, i.Member.User.Username))
+		fmt.Println(util.Info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, i.Member.User.Username))
 		// NOTE: See src/bot/README.md for the format used in custom IDs
 		fields := strings.Fields(i.MessageComponentData().CustomID)
 		if h, ok := componentHandlers[fields[0]]; ok {
@@ -102,11 +103,11 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		return
 	}
 
-	fmt.Println(info("Message Details: Content='%s', Author='%s', Channel='%s'",
+	fmt.Println(util.Info("Message Details: Content='%s', Author='%s', Channel='%s'",
 		message.Content, message.Author.Username, message.ChannelID))
 
 	if strings.TrimSpace(message.Content) == "" {
-		fmt.Println(info("Message content is empty. Ignoring."))
+		fmt.Println(util.Info("Message content is empty. Ignoring."))
 		return
 	}
 
@@ -119,7 +120,7 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 		}
 
 		cmd := strings.ToLower(args[0])
-		fmt.Println(info("Processing command: '%s' with arguments %s", cmd, args[1:]))
+		fmt.Println(util.Info("Processing command: '%s' with arguments %s", cmd, args[1:]))
 
 		switch cmd {
 		case "help":
