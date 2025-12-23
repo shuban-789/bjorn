@@ -9,6 +9,16 @@ var cmd_prefix = ">>"
 // all the registered slash commands (populated by each command file's init())
 var commands []*discordgo.ApplicationCommand
 
+var FtcYearChoices []*discordgo.ApplicationCommandOptionChoice = []*discordgo.ApplicationCommandOptionChoice{
+	{Name:  "2025-2026", Value: "2025"},
+	{Name:  "2024-2025", Value: "2024"},
+	{Name:  "2023-2024", Value: "2023"},
+	{Name:  "2022-2023", Value: "2022"},
+	{Name:  "2021-2022", Value: "2021"},
+	{Name:  "2020-2021", Value: "2020"},
+	{Name:  "2019-2020", Value: "2019"},
+}
+
 // commandHandlers maps top-level command names to interaction handlers.
 var commandHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
 

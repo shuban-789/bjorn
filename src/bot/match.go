@@ -57,6 +57,7 @@ func init() {
 							Name:        "year",
 							Description: "Year of the event (e.g., 2025).",
 							Required:    true,
+							Choices:     FtcYearChoices,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
@@ -68,7 +69,7 @@ func init() {
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
-					Name:        "eventstart2",
+					Name:        "track",
 					Description: "Start an active match tracker for a current event.",
 					Options: []*discordgo.ApplicationCommandOption{
 						{
@@ -76,15 +77,7 @@ func init() {
 							Name:        "year",
 							Description: "Year of the event (e.g., 2025).",
 							Required:    true,
-							Choices: []*discordgo.ApplicationCommandOptionChoice{
-								{Name:  "2025-2026", Value: "2025"},
-								{Name:  "2024-2025", Value: "2024"},
-								{Name:  "2023-2024", Value: "2023"},
-								{Name:  "2022-2023", Value: "2022"},
-								{Name:  "2021-2022", Value: "2021"},
-								{Name:  "2020-2021", Value: "2020"},
-								{Name:  "2019-2020", Value: "2019"},
-							},
+							Choices:     FtcYearChoices,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
@@ -95,7 +88,7 @@ func init() {
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "name",
+							Name:        "event",
 							Description: "The name of the event.",
 							Required:    true,
 							Autocomplete: true,
@@ -131,6 +124,14 @@ func init() {
 					return
 				}
 				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
+			case "track":
+				year := getStringOption(sub.Options, "year")
+				eventCode := getStringOption(sub.Options, "event")
+				if year == "" || eventCode == "" {
+					interactions.SendMessage(s, i, "", "Usage: /match track <year> <region> <event_name>")
+					return
+				}
+				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
 			default:
 				interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
 			}
@@ -147,7 +148,7 @@ func init() {
 
 		sub := data.Options[0]
 		subName := sub.Name
-		if subName != "eventstart2" {
+		if subName != "track" {
 			return
 		}
 		
@@ -155,7 +156,8 @@ func init() {
 			fmt.Printf("option %d: %+v\n", i, sub.Options[i])
 		}
 		
-		if len(sub.Options) >= 2 && sub.Options[1].Focused && sub.Options[1].Name == "region" {
+		// region autocomplete
+		if len(sub.Options) >= 2 && sub.Options[1].Focused {
 			regionQuery := sub.Options[1].Value.(string)
 
 			// discord only allows up to 25 suggestions btw
@@ -178,7 +180,8 @@ func init() {
 			return
 		}
 
-		if len(sub.Options) >= 3 && sub.Options[2].Focused && sub.Options[2].Name == "name" {
+		// event name autocomplete
+		if len(sub.Options) >= 3 && sub.Options[2].Focused {
 			regionCode := getStringOption(sub.Options, "region")
 			eventNameQuery := sub.Options[2].Value.(string)
 			if regionCode == "" {
@@ -186,7 +189,7 @@ func init() {
 				return
 			}
 
-			var results []search.EventInfo = search.SearchEventNames(eventNameQuery, 25, regionCode)
+			var results []search.EventInfo = search.SearchEventNames(eventNameQuery, 25, regionCode, false)
 			
 			suggestions := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
 			for _, event := range results {
@@ -263,21 +266,6 @@ type EventTracked struct {
 
 var eventsBeingTracked []EventTracked
 
-type EventDetails struct {
-	Name          string `json:"name"`
-	Start         string `json:"start"`
-	End           string `json:"end"`
-	Venue         string `json:"venue"`
-	Address       string `json:"address"`
-	Country       string `json:"country"`
-	City          string `json:"city"`
-	State         string `json:"state"`
-	Website       string `json:"website"`
-	LiveStreamUrl string `json:"liveStreamUrl"`
-	Ongoing       bool   `json:"ongoing"`
-	TimeZone      string `json:"timezone"`
-}
-
 // this is used in the api call to get a match, it's a small part of it but I use this in other funcs so I define it globally
 type TeamDTO struct {
 	AllianceColor string `json:"alliance"`
@@ -335,20 +323,20 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 }
 
 func eventStart(channelID, guildID, year, eventCode string, session *discordgo.Session, i *discordgo.InteractionCreate) {
-	eventDetails, err := fetchEventDetails(year, eventCode)
+	eventDetails, err := search.FetchEventData(year, eventCode)
 	if err != nil {
 		interactions.SendMessage(session, i, channelID, err.Error())
 		return
 	}
 
-	location, err := time.LoadLocation(eventDetails.TimeZone)
+	location, err := time.LoadLocation(eventDetails.Timezone)
 	if err != nil {
 		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Error loading event timezone: %v", err))
 		return
 	}
 
 	today := time.Now().In(location)
-	startTime, endTime, err := getEventStartEndTime(eventDetails, today, location)
+	startTime, endTime, err := search.GetEventStartEndTime(eventDetails, today, location)
 	if err != nil {
 		interactions.SendMessage(session, i, channelID, err.Error())
 		return
@@ -653,7 +641,7 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 
 		event.LastUpdateTime = time.Now()
 
-		eventDetails, err := fetchEventDetails(event.Year, event.EventCode)
+		eventDetails, err := search.FetchEventData(event.Year, event.EventCode)
 		if err != nil {
 			session.ChannelMessageSend(event.UpdateChannelId, err.Error())
 			return
@@ -741,55 +729,6 @@ func startMatchEventUpdater(session *discordgo.Session, interval time.Duration) 
 			}
 		}
 	}()
-}
-
-func fetchEventDetails(year, eventCode string) (EventDetails, error) {
-	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s", year, eventCode)
-	resp, err := http.Get(url)
-	if err != nil {
-		return EventDetails{}, fmt.Errorf("failed to fetch match data: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return EventDetails{}, fmt.Errorf("that event does not exist!")
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return EventDetails{}, fmt.Errorf("failed to read response: %v", err)
-	}
-
-	var eventDetails EventDetails
-	err = json.Unmarshal(body, &eventDetails)
-	if err != nil {
-		return EventDetails{}, fmt.Errorf("failed to parse event details: %v", err)
-	}
-
-	return eventDetails, nil
-}
-
-func getEventStartEndTime(eventDetails EventDetails, today time.Time, location *time.Location) (time.Time, time.Time, error) {
-	layout := "2006-01-02"
-	startTime, err := time.Parse(layout, eventDetails.Start)
-	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("failed to parse event start time: %v", err)
-	}
-
-	endTime, err := time.Parse(layout, eventDetails.End)
-	if err != nil {
-		return time.Time{}, time.Time{}, fmt.Errorf("failed to parse event end time: %v", err)
-	}
-
-	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 8, 0, 0, 0, location)
-	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 17, 0, 0, 0, location)
-
-	// If we start after 8, set it to be scheduled in the future so it doesn't error out
-	if startTime.Year() == today.Year() && startTime.YearDay() == today.YearDay() && today.Hour() >= 8 {
-		startTime = today.Add(5 * time.Minute)
-	}
-
-	return startTime, endTime, nil
 }
 
 func getAllianceFromTeams(teams []TeamDTO) TwoTeamAlliance {
