@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
@@ -85,7 +86,8 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		}
 
 	case discordgo.InteractionMessageComponent:
-		fmt.Println(util.Info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, i.Member.User.Username))
+		authorid, _ := interactions.GetAuthorId(nil, i)
+		fmt.Println(util.Info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, authorid))
 		// NOTE: See src/bot/README.md for the format used in custom IDs
 		fields := strings.Fields(i.MessageComponentData().CustomID)
 		if h, ok := componentHandlers[fields[0]]; ok {

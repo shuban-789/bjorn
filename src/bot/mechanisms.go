@@ -29,6 +29,7 @@ func init() {
 			sub := data.Options[0]
 			subName := sub.Name
 
+			// todo: note that i.mmember is nil in dms so this will error out, use GetAuthorId instead, for now I just restrict to guilds only so we can do admin checks
 			isAdminUser, err := isAdmin(s, i.GuildID, i.Member.User.ID)
 			if err != nil {
 				_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseChannelMessageWithSource, Data: &discordgo.InteractionResponseData{Content: "Unable to check permissions.", Flags: 1 << 6}})
