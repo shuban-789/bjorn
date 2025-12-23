@@ -27,6 +27,7 @@ func init() {
 					Description: "Your FTC team.",
 					Required:    true,
 					Autocomplete: true,
+					ChannelTypes: interactions.GUILDS_ONLY,
 				},
 			},
 		},
@@ -86,8 +87,13 @@ func hash(ID string) string {
 // func rolemeCmd(ChannelID string, args []string, session *discordgo.Session, guildId string, authorID string) {
 func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
 	ChannelID := interactions.GetChannelId(message, i)
-	guildId := interactions.GetGuildId(message, i)
-	authorID := interactions.GetAuthorId(message, i)
+	guildId, guildRetrieved := interactions.GetGuildId(message, i)
+	authorID, authorRetrieved := interactions.GetAuthorId(message, i)
+
+	if !authorRetrieved || !guildRetrieved {
+		interactions.SendMessage(session, i, ChannelID, "Unable to retrieve author or guild information. This command can only be used in a server.")
+		return
+	}
 
 	if len(args) != 1 {
 		interactions.SendMessage(session, i, ChannelID, "Please provide a team number, and nothing more.")

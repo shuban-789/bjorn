@@ -9,22 +9,29 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func GetGuildId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) string {
+func GetGuildId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) (string, bool) {
 	if i != nil {
-		return i.GuildID
+		return i.GuildID, i.GuildID != ""
 	}
 	if message != nil {
-		return message.GuildID
+		return message.GuildID, message.GuildID != ""
 	}
 	panic("Both message and interaction are nil in getGuildId")
 }
 
-func GetAuthorId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) string {
+func GetAuthorId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) (string, bool) {
 	if i != nil {
-		return i.Member.User.ID
+		if i.Member != nil && i.Member.User != nil { // interaction is happening in a server
+			return i.Member.User.ID, true
+		}
+
+		if (i.User != nil) { // interaction is happening in DMs
+			return i.User.ID, false
+		}
+		return "", false
 	}
 	if message != nil {
-		return message.Author.ID
+		return message.Author.ID, true
 	}
 	panic("Both message and interaction are nil in getAuthorId")
 }

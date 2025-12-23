@@ -16,6 +16,7 @@ func init() {
 					Type:        discordgo.ApplicationCommandOptionSubCommand,
 					Name:        "restart",
 					Description: "Restart the bot.",
+					ChannelTypes: interactions.GUILDS_ONLY,
 				},
 			},
 		},
@@ -51,8 +52,13 @@ func init() {
 
 func mechcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
 	channelId := interactions.GetChannelId(message, i)
-	guildId := interactions.GetGuildId(message, i)
-	authorId := interactions.GetAuthorId(message, i)
+	guildId, guildRetrieved := interactions.GetGuildId(message, i)
+	authorId, authorRetrieved := interactions.GetAuthorId(message, i)
+
+	if !authorRetrieved || !guildRetrieved {
+		interactions.SendMessage(session, i, channelId, "Unable to retrieve author or guild information. This command can only be used in a server.")
+		return
+	}
 
 	if len(args) > 1 {
 		interactions.SendMessage(session, i, channelId, "Please provide a subcommand (e.g., 'restart').")

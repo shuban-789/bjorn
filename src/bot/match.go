@@ -274,9 +274,14 @@ type TeamDTO struct {
 }
 
 func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
-	authorId := interactions.GetAuthorId(message, i)
-	guildId := interactions.GetGuildId(message, i)
+	authorId, authorRetrieved := interactions.GetAuthorId(message, i)
+	guildId, _ := interactions.GetGuildId(message, i)
 	channelId := interactions.GetChannelId(message, i)
+
+	if !authorRetrieved {
+		interactions.SendMessage(session, i, channelId, "Unable to retrieve author information.")
+		return
+	}
 
 	if len(args) < 1 {
 		interactions.SendMessage(session, i, channelId, "Please provide a subcommand (e.g., 'info').")
@@ -374,6 +379,7 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 	}
 
 	// create the discord event
+	if guildID == "" { return } // can't create event in DMs
 	event, err := session.GuildScheduledEventCreate(guildID, &discordgo.GuildScheduledEventParams{
 		Name:               eventDetails.Name,
 		Description:        description,
