@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/shuban-789/bjorn/src/bot/util"
@@ -102,6 +103,8 @@ func FetchEvents() map[string][]EventInfo {
 			Name: event.Name,
 			Tokens: util.GenerateNormalizedTokens(event.Name),
 			Region: regionInfo,
+			End: event.End,
+			Timezone: event.Timezone,
 		})
 	}
 	lastEventDataFetch = time.Now()
@@ -125,7 +128,39 @@ func GetEventsData() map[string][]EventInfo{
 func SearchEventNames(query string, maxResults int, regionCode string, includeFinishedEvents bool) []EventInfo {
 	eventsMap := GetEventsData()
 	events := eventsMap[regionCode]
-	return util.TokenizedSearch(events, query, maxResults)
+
+	searchResults := util.TokenizedSearch(events, query, maxResults)
+
+	// sort so that the earlier events are first in the list
+	sort.Slice(searchResults, func(i, j int) bool {
+		return EventEndsBefore(searchResults[i].End, searchResults[j].End)
+	})
+
+	if includeFinishedEvents {
+		return searchResults
+	}
+
+	filteredResults := make([]EventInfo, 0, len(searchResults))
+	for _, event := range searchResults {
+		ended, err := EventHasEnded(event)
+		if err != nil {
+			continue
+		}
+		if !ended {
+			filteredResults = append(filteredResults, event)
+		}
+	}
+	return filteredResults
+}
+
+func EventEndsBefore(endA string, endB string) bool {
+	layout := "2006-01-02"
+	timeA, errA := time.Parse(layout, endA)
+	timeB, errB := time.Parse(layout, endB)
+	if errA != nil || errB != nil {
+		return false
+	}
+	return timeA.Before(timeB)
 }
 
 func GetEventCodeFromName(name string, regionCode string) (code string, ok bool) {
