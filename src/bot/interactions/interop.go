@@ -26,7 +26,7 @@ func GetAuthorId(message *discordgo.MessageCreate, i *discordgo.InteractionCreat
 		}
 
 		if (i.User != nil) { // interaction is happening in DMs
-			return i.User.ID, false
+			return i.User.ID, true
 		}
 		return "", false
 	}
