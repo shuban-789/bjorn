@@ -45,7 +45,7 @@ func init() {
 
 	// Team autocomplete for /roleme team
 	RegisterAutocomplete("roleme/team", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
-		results, err := search.SearchSDTeamNames(query, 25)
+		results, err := search.SearchTeamNames(query, 25, "USCASD")
 		if err != nil {
 			fmt.Println(util.Fail("Error searching team names: %v", err))
 			return nil
@@ -53,8 +53,8 @@ func init() {
 		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
 		for _, team := range results {
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-				Name:  fmt.Sprintf("%s %s", team.TeamID, team.Name),
-				Value: team.TeamID,
+				Name:  fmt.Sprintf("%s %s", team.Number, team.Name),
+				Value: team.Number,
 			})
 		}
 		return choices

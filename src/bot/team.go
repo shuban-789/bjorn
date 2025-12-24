@@ -51,8 +51,8 @@ func init() {
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "team_id",
-							Description: "The FTC team ID to look up.",
+							Name:        "team",
+							Description: "The FTC team to look up.",
 							Required:    true,
 						},
 					},
@@ -64,8 +64,8 @@ func init() {
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "team_id",
-							Description: "The FTC team ID to look up.",
+							Name:        "team",
+							Description: "The FTC team to look up.",
 							Required:    true,
 						},
 					},
@@ -77,7 +77,7 @@ func init() {
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "team_id",
+							Name:        "team",
 							Description: "The FTC team ID to look up.",
 							Required:    true,
 						},
@@ -98,7 +98,7 @@ func init() {
 						subName = ""
 					}
 
-					teamID := getStringOption(sub.Options, "team_id")
+					teamID := getStringOption(sub.Options, "team")
 					if teamID == "" {
 						interactions.SendMessage(s, i, "", "Please provide a team number.")
 						return
@@ -120,6 +120,8 @@ func init() {
 	RegisterComponentHandler("team;awards_n", func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
 		handleAwardsPagination(s, ic, data, 1)
 	})
+
+	// RegisterAutocomplete("team/stats/team")
 }
 
 type TeamInfo struct {
