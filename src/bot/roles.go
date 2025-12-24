@@ -43,24 +43,13 @@ func init() {
 		},
 	)
 
-	RegisterAutocompleteHandler("roleme", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		data := i.ApplicationCommandData()
-
-		if len(data.Options) == 0 {
-			return
-		}
-		fmt.Printf("roleme command autocomplete data: %+v\n", data)
-		
-		if !data.Options[0].Focused { return }
-
-		teamQuery := data.Options[0].Value.(string)
-		fmt.Printf("roleme autocomplete query: %s\n", teamQuery)
-		results, err := search.SearchSDTeamNames(teamQuery, 25)
+	// Team autocomplete for /roleme team
+	RegisterAutocomplete("roleme/team", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+		results, err := search.SearchSDTeamNames(query, 25)
 		if err != nil {
 			fmt.Println(util.Fail("Error searching team names: %v", err))
-			return
+			return nil
 		}
-
 		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
 		for _, team := range results {
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
@@ -68,13 +57,7 @@ func init() {
 				Value: team.TeamID,
 			})
 		}
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-			Data: &discordgo.InteractionResponseData{
-				Choices: choices,
-			},
-		})
-		return
+		return choices
 	})
 }
 

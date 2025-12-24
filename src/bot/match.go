@@ -138,75 +138,32 @@ func init() {
 		},
 	)
 
-	RegisterAutocompleteHandler("match", func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		data := i.ApplicationCommandData()
-		
-		if len(data.Options) == 0 {
-			return
-		}
-		fmt.Printf("match command autocomplete data: %+v\n", data)
-
-		sub := data.Options[0]
-		subName := sub.Name
-		if subName != "track" {
-			return
-		}
-		
-		for i := range sub.Options {
-			fmt.Printf("option %d: %+v\n", i, sub.Options[i])
-		}
-		
-		// region autocomplete
-		if len(sub.Options) >= 2 && sub.Options[1].Focused {
-			regionQuery := sub.Options[1].Value.(string)
-
-			// discord only allows up to 25 suggestions btw
-			resultRegions := search.SearchRegionNames(regionQuery, 25)
-
-			suggestions := make([]*discordgo.ApplicationCommandOptionChoice, 0)
-			for _, region := range resultRegions {
-				suggestions = append(suggestions, &discordgo.ApplicationCommandOptionChoice{
-					Name:  region.Name,
-					Value: region.Code,
-				})
-			}
-
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-				Data: &discordgo.InteractionResponseData{
-					Choices: suggestions,
-				},
+	RegisterAutocomplete("match/track/region", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+		resultRegions := search.SearchRegionNames(query, 25)
+		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(resultRegions))
+		for _, region := range resultRegions {
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  region.Name,
+				Value: region.Code,
 			})
-			return
 		}
+		return choices
+	})
 
-		// event name autocomplete
-		if len(sub.Options) >= 3 && sub.Options[2].Focused {
-			regionCode := getStringOption(sub.Options, "region")
-			eventNameQuery := sub.Options[2].Value.(string)
-			if regionCode == "" {
-				// todo: I'm not sure if I need to respond with no suggestions or smth or if it's ok to do nothing
-				return
-			}
-
-			var results []search.EventInfo = search.SearchEventNames(eventNameQuery, 25, regionCode, false)
-			
-			suggestions := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
-			for _, event := range results {
-				suggestions = append(suggestions, &discordgo.ApplicationCommandOptionChoice{
-					Name:  event.Name,
-					Value: event.Code,
-				})
-			}
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-				Data: &discordgo.InteractionResponseData{
-					Choices: suggestions,
-				},
+	RegisterAutocomplete("match/track/event", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+		regionCode := opts["region"]
+		if regionCode == "" {
+			return nil
+		}
+		results := search.SearchEventNames(query, 25, regionCode, false)
+		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
+		for _, event := range results {
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  event.Name,
+				Value: event.Code,
 			})
-			return
 		}
-
+		return choices
 	})
 }
 

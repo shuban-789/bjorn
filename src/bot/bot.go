@@ -81,9 +81,13 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		}
 	
 	case discordgo.InteractionApplicationCommandAutocomplete:
+		// first see if a custom one exists
 		if h, ok := autocompleteHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
+			return
 		}
+
+		handleAutocomplete(s, i)
 
 	case discordgo.InteractionMessageComponent:
 		authorid, _ := interactions.GetAuthorId(nil, i)
