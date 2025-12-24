@@ -1,7 +1,10 @@
 package bot
 
 import (
+	"fmt"
+
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
 var cmd_prefix = ">>"
@@ -20,7 +23,8 @@ var FtcYearChoices []*discordgo.ApplicationCommandOptionChoice = []*discordgo.Ap
 }
 
 // commandHandlers maps top-level command names to interaction handlers.
-var commandHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
+type CommandHandler func(*discordgo.Session, *discordgo.InteractionCreate)
+var commandHandlers map[string]CommandHandler
 
 // map of top level cmds for custom autocomplete handlers so you can write more custom code if needed
 // basically this is just the old system but I didn't want to delete it just in case
@@ -35,11 +39,12 @@ type AutocompleteProvider func(opts map[string]string, query string) []*discordg
 var autocompleteProviders map[string]AutocompleteProvider
 
 // maps custom ID of component to handler func
-var componentHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate, string)
+type ComponentHandler func(*discordgo.Session, *discordgo.InteractionCreate, string)
+var componentHandlers map[string]ComponentHandler
 
-func RegisterCommand(cmd *discordgo.ApplicationCommand, handler func(*discordgo.Session, *discordgo.InteractionCreate)) {
+func RegisterCommand(cmd *discordgo.ApplicationCommand, handler CommandHandler) {
 	if commandHandlers == nil {
-		commandHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate))
+		commandHandlers = make(map[string]CommandHandler)
 	}
 	commands = append(commands, cmd)
 	commandHandlers[cmd.Name] = handler
@@ -126,17 +131,21 @@ func handleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	choices := provider(opts, query)
 
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
 		Data: &discordgo.InteractionResponseData{
 			Choices: choices,
 		},
 	})
+
+	if err != nil {
+		fmt.Println(util.Fail("Error responding to autocomplete interaction: %v", err))
+	}
 }
 
-func RegisterComponentHandler(customID string, handler func(*discordgo.Session, *discordgo.InteractionCreate, string)) {
+func RegisterComponentHandler(customID string, handler ComponentHandler) {
 	if componentHandlers == nil {
-		componentHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate, string))
+		componentHandlers = make(map[string]ComponentHandler)
 	}
 	componentHandlers[customID] = handler
 

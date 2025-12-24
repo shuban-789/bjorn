@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/shuban-789/bjorn/src/bot/util"
@@ -13,7 +14,7 @@ import (
 
 type TeamInfo struct {
 	Name   string `json:"name"`
-	Number string `json:"number"`
+	Number int    `json:"number"`
 	Tokens []string
 }
 
@@ -33,7 +34,12 @@ func GetSDTeamNameFromNumber(teamNumber string) (string, error) {
 	teams := FetchTeams()
 
 	for _, team := range teams["USCASD"] { // hardcode to uscasd for now
-		if team.Number == teamNumber {
+		num, err := strconv.Atoi(teamNumber)
+		if err != nil {
+			return "", errors.New("invalid team number")
+		}
+
+		if team.Number == num {
 			return team.Name, nil
 		}
 	}
@@ -43,8 +49,12 @@ func GetSDTeamNameFromNumber(teamNumber string) (string, error) {
 var lastTeamDataFetch time.Time
 
 func FetchTeams() map[string][]TeamInfo {
-	if teamNames != nil && time.Since(lastTeamDataFetch) < 24*time.Hour {
+	if teamNames != nil && time.Since(lastTeamDataFetch) < 10*24*time.Hour {
 		return teamNames
+	}
+
+	if teamNames == nil {
+		teamNames = make(map[string][]TeamInfo)
 	}
 
 	fmt.Println(util.Info("Fetching teams data from API..."))
@@ -77,7 +87,7 @@ func FetchTeams() map[string][]TeamInfo {
 		}
 
 		for i := range teams {
-			teams[i].Tokens = util.GenerateNormalizedTokens(teams[i].Number + " " + teams[i].Name)
+			teams[i].Tokens = util.GenerateNormalizedTokens(strconv.Itoa(teams[i].Number) + " " + teams[i].Name)
 		}
 
 		teamNames[region.Code] = teams
@@ -100,7 +110,7 @@ func GetTeams() map[string][]TeamInfo{
 	return teamNames
 }
 
-func GetTeamCodeFromName(name string, regionCode string) (code string, ok bool) {
+func GetTeamCodeFromName(name string, regionCode string) (code int, ok bool) {
 	teamsMap := GetTeams()
 	teams := teamsMap[regionCode]
 	for _, team := range teams {
@@ -108,7 +118,7 @@ func GetTeamCodeFromName(name string, regionCode string) (code string, ok bool) 
 			return team.Number, true
 		}
 	}
-	return "", false
+	return -1, false
 }
 
 func init() {

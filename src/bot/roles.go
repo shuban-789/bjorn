@@ -53,8 +53,8 @@ func init() {
 		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
 		for _, team := range results {
 			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-				Name:  fmt.Sprintf("%s %s", team.Number, team.Name),
-				Value: team.Number,
+				Name:  fmt.Sprintf("%d %s", team.Number, team.Name),
+				Value: fmt.Sprint(team.Number),
 			})
 		}
 		return choices

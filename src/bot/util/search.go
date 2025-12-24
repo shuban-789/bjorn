@@ -85,7 +85,7 @@ func GenerateNormalizedTokens(name string) []string {
 	return tokens
 }
 
-// remove dashes + convert to lowercase for easier searching
+// remove dashes, parentheses + convert to lowercase for easier searching
 func normalizeName(name string) string {
-	return strings.ToLower(strings.ReplaceAll(name, "-", " "))
+	return strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(name, "-", " "), "(", ""), ")", ""))
 }
