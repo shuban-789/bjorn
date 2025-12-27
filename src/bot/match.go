@@ -585,8 +585,93 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	// 	}
 	// }
 
-	_, err = session.ChannelMessageSendComplex(ChannelID, discordMsg)
+	msg, err := session.ChannelMessageSendComplex(ChannelID, discordMsg)
 	HandleErr(err)
+	
+	fmt.Print(msg.ID)
+	thread, err := session.MessageThreadStartComplex(msg.ChannelID, msg.ID, &discordgo.ThreadStart{
+		Name:      matchName,
+		AutoArchiveDuration: interactions.AUTO_ARCHIVE_1_DAY,
+		Type:    discordgo.ChannelTypeGuildPublicThread,
+	})
+	HandleErr(err)
+
+	// Get channel to retrieve guild ID
+	// for some reason message.GuildId is empty when called from interaction
+    channel, err := session.Channel(ChannelID)
+    if HandleErr(err) {
+        return
+    }
+    guildID := channel.GuildID
+
+	users, err := getUsersToPing(session, guildID, selectedMatch.RedTeams, selectedMatch.BlueTeams)
+	if HandleErr(err) {
+		session.ChannelMessageSend(thread.ID, fmt.Sprintf("Error getting users to ping: %v", err))
+	}
+
+	if len(users) > 0 {
+		var mentions strings.Builder
+		mentions.WriteString("Match update! ")
+		for userID := range users {
+			mentions.WriteString(fmt.Sprintf("<@%s> ", userID))
+		}
+		session.ChannelMessageSend(thread.ID, mentions.String())
+	}
+}
+
+func getUsersToPing(session *discordgo.Session, guildId string, redTeams, blueTeams []TeamDTO) (map[string]bool, error) {
+	roles, err := session.GuildRoles(guildId)
+	if HandleErr(err) {
+		return nil, err
+	}
+
+	teamNumbers := make([]string, 0)
+	for _, team := range redTeams {
+		teamNumbers = append(teamNumbers, fmt.Sprintf("%d", team.TeamNumber))
+	}
+	for _, team := range blueTeams {
+		teamNumbers = append(teamNumbers, fmt.Sprintf("%d", team.TeamNumber))
+	}
+
+	teamRoleIDs := make([]string, 0)
+	var matchPingRoleID string
+	for _, role := range roles {
+		for _, teamNum := range teamNumbers {
+			if strings.HasPrefix(strings.TrimSpace(role.Name), teamNum) {
+				teamRoleIDs = append(teamRoleIDs, role.ID)
+			}
+		}
+
+		// "match pings", "Match-Pings", etc should all work
+		roleNameLower := strings.ReplaceAll(strings.ToLower(role.Name), "-", " ")
+		if roleNameLower == "match pings" {
+			matchPingRoleID = role.ID
+		}
+	}
+
+	usersToPing := make(map[string]bool)
+	// todo: guildmembers only returns 1000 members at a time, sdftc doesn't have that many but it still bothers me, we'd need to implement pagination to fully fix
+	members, err := session.GuildMembers(guildId, "", 1000)
+	if HandleErr(err) {
+		return nil, err
+	}
+	
+	for _, member := range members {
+		for _, memberRoleID := range member.Roles {
+			// Check team roles
+			for _, teamRoleID := range teamRoleIDs {
+				if memberRoleID == teamRoleID {
+					usersToPing[member.User.ID] = true
+				}
+			}
+			// Check match ping role
+			if matchPingRoleID != "" && memberRoleID == matchPingRoleID {
+				usersToPing[member.User.ID] = true
+			}
+		}
+	}
+
+	return usersToPing, nil
 }
 
 func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
