@@ -39,8 +39,12 @@ type AutocompleteProvider func(opts map[string]string, query string) []*discordg
 var autocompleteProviders map[string]AutocompleteProvider
 
 // maps custom ID of component to handler func
-type ComponentHandler func(*discordgo.Session, *discordgo.InteractionCreate, string)
+type ComponentHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, data string)
 var componentHandlers map[string]ComponentHandler
+
+// maps custom ID of modal to handler func
+type ModalHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData)
+var modalHandlers map[string]ModalHandler
 
 func RegisterCommand(cmd *discordgo.ApplicationCommand, handler CommandHandler) {
 	if commandHandlers == nil {
@@ -148,14 +152,13 @@ func RegisterComponentHandler(customID string, handler ComponentHandler) {
 		componentHandlers = make(map[string]ComponentHandler)
 	}
 	componentHandlers[customID] = handler
+}
 
-	if len(componentHandlers) >= MAX_COMPONENT_HANDLERS {
-		// remove an arbitrary component handler to free up space
-		for k := range componentHandlers {
-			delete(componentHandlers, k)
-			break
-		}
+func RegisterModalHandler(customID string, handler ModalHandler) {
+	if modalHandlers == nil {
+		modalHandlers = make(map[string]ModalHandler)
 	}
+	modalHandlers[customID] = handler
 }
 
 // utility to get string option from interaction data options

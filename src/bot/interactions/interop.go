@@ -36,6 +36,23 @@ func GetAuthorId(message *discordgo.MessageCreate, i *discordgo.InteractionCreat
 	panic("Both message and interaction are nil in getAuthorId")
 }
 
+func GetAuthorName(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) (string, bool) {
+	if i != nil {
+		if i.Member != nil && i.Member.User != nil { // interaction is happening in a server
+			return i.Member.User.Username, true
+		}
+
+		if (i.User != nil) { // interaction is happening in DMs
+			return i.User.Username, true
+		}
+		return "", false
+	}
+	if message != nil {
+		return message.Author.Username, true
+	}
+	panic("Both message and interaction are nil in getAuthorId")
+}
+
 func GetChannelId(message *discordgo.MessageCreate, i *discordgo.InteractionCreate) string {
 	if i != nil {
 		return i.ChannelID
@@ -88,10 +105,24 @@ func SendMessage(session *discordgo.Session, i *discordgo.InteractionCreate, cha
 }
 
 // Returns whether or not the message was sent successfully
-func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, message string, components *[]discordgo.MessageComponent, embeds *[]*discordgo.MessageEmbed) (messageObj *discordgo.Message, ok bool) {
+// note that if sendNewMessage is true, messageObj will be nil bc idk how to get it
+func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, message string, components *[]discordgo.MessageComponent, embeds *[]*discordgo.MessageEmbed, sendNewMessage bool) (messageObj *discordgo.Message, ok bool) {
 	var err error
 	if i != nil {
-		messageObj, err = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message, Components: components, Embeds: embeds})
+		if sendNewMessage {
+			err = session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content:    message,
+					Components: *components,
+					Embeds:     *embeds,
+				},
+			})
+			messageObj = nil
+		} else {
+			messageObj, err = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &message, Components: components, Embeds: embeds})
+		}
+		
 		if err != nil {
 			msg := fmt.Sprintf("Failed to send message: %v", err)
 			messageObj, err = session.InteractionResponseEdit(i.Interaction, &discordgo.WebhookEdit{Content: &msg})
@@ -111,4 +142,14 @@ func SendMessageComplex(session *discordgo.Session, i *discordgo.InteractionCrea
 	}
 
 	return messageObj, true
+}
+
+func SendEphemeralMessage(session *discordgo.Session, i *discordgo.InteractionCreate, message string) error {
+	return session.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content: message,
+			Flags:  discordgo.MessageFlagsEphemeral,
+		},
+	})
 }

@@ -19,6 +19,19 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
+var (
+	awardsPrevBtnId string = "team;awards_p"
+	awardsJumpBtnId  string = "team;awards_j_btn"
+	awardsJumpModalId  string = "team;awards_j_modal"
+	awardsNextBtnId  string = "team;awards_n"
+	awardsJumpModalInputId string = "page_input"
+
+	awardsPrevBtnIdFull = func(teamNum, pageNum, totalPg int) string { return fmt.Sprintf(awardsPrevBtnId + " %d_%d_%d", teamNum, pageNum, totalPg) }
+	awardsJumpBtnIdFull  = func(teamNum, totalPg int) string { return fmt.Sprintf(awardsJumpBtnId + " %d_%d", teamNum, totalPg) }
+	awardsJumpModalIdFull  = func(teamNum, totalPg int) string { return fmt.Sprintf(awardsJumpModalId + " %d_%d", teamNum, totalPg) }
+	awardsNextBtnIdFull  = func(teamNum, pageNum, totalPg int) string { return fmt.Sprintf(awardsNextBtnId + " %d_%d_%d", teamNum, pageNum, totalPg) }
+)
+
 // cache of team number to awards, used to reduce api calls
 var maxAwardsCacheSize int = 100             // I don't rlly want to use too much memory here
 var awardPersistenceDuration = time.Hour * 5 // in minutes
@@ -117,11 +130,20 @@ func init() {
 		},
 	)
 
-	RegisterComponentHandler("team;awards_p", func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+	RegisterComponentHandler(awardsPrevBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
 		handleAwardsPagination(s, ic, data, -1)
 	})
 
-	RegisterComponentHandler("team;awards_n", func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+	RegisterComponentHandler(awardsJumpBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+		jumpToAwardsPageModal(s, ic, data)
+	})
+
+	RegisterModalHandler(awardsJumpModalId, func (s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData) {
+		handleAwardsJump(s, i, id_data, modal_data)
+	})
+
+
+	RegisterComponentHandler(awardsNextBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
 		handleAwardsPagination(s, ic, data, 1)
 	})
 
@@ -367,14 +389,15 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 	embed := generateAwardsEmbed(team.Number, team.Name, currentPage)
 	embeds := []*discordgo.MessageEmbed{embed}
 
-	var id_prev string = fmt.Sprintf("team;awards_p %d_%d_%d", team.Number, currentPage, totalPages)
-	var id_next string = fmt.Sprintf("team;awards_n %d_%d_%d", team.Number, currentPage, totalPages)
+	var id_prev string = fmt.Sprintf(awardsPrevBtnIdFull(team.Number, currentPage, totalPages))
+	var id_jump string = fmt.Sprintf(awardsJumpBtnIdFull(team.Number, totalPages))
+	var id_next string = fmt.Sprintf(awardsNextBtnIdFull(team.Number, currentPage, totalPages))
 
 	components := []discordgo.MessageComponent{
-		interactions.CreatePaginationButtons(totalPages, currentPage, id_prev, id_next),
+		interactions.CreatePaginationButtons(totalPages, currentPage, id_prev, id_jump, id_next),
 	}
 
-	interactions.SendMessageComplex(session, i, channelID, "", &components, &embeds)
+	interactions.SendMessageComplex(session, i, channelID, "", &components, &embeds, false)
 }
 
 func handleAwardsPagination(s *discordgo.Session, ic *discordgo.InteractionCreate, data string, delta int) {
@@ -402,10 +425,11 @@ func handleAwardsPagination(s *discordgo.Session, ic *discordgo.InteractionCreat
 
 	embed := updateAwardsEmbed(teamNum, pageNum, ic.Message.Embeds[0])
 	embeds := []*discordgo.MessageEmbed{embed}
-	idPrev := fmt.Sprintf("team;awards_p %d_%d_%d", teamNum, pageNum, totalPg)
-	idNext := fmt.Sprintf("team;awards_n %d_%d_%d", teamNum, pageNum, totalPg)
+	idPrev := fmt.Sprintf(awardsPrevBtnIdFull(teamNum, pageNum, totalPg))
+	idJump := fmt.Sprintf(awardsJumpBtnIdFull(teamNum, totalPg))
+	idNext := fmt.Sprintf(awardsNextBtnIdFull(teamNum, pageNum, totalPg))
 	components := []discordgo.MessageComponent{
-		interactions.CreatePaginationButtons(totalPg, pageNum, idPrev, idNext),
+		interactions.CreatePaginationButtons(totalPg, pageNum, idPrev, idJump, idNext),
 	}
 
 	s.InteractionRespond(ic.Interaction, &discordgo.InteractionResponse{
@@ -415,6 +439,100 @@ func handleAwardsPagination(s *discordgo.Session, ic *discordgo.InteractionCreat
 			Components: components,
 		},
 	})
+}
+
+func handleAwardsJump(s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData) {
+	parts := strings.Split(id_data, "_")
+	if len(parts) != 2 {
+		fmt.Print(errors.New(util.Fail("Invalid jump data format: %v", id_data)))
+		return
+	}
+	teamNum, err1 := strconv.Atoi(parts[0])
+	totalPg, err2 := strconv.Atoi(parts[1])
+	if err1 != nil || err2 != nil {
+		fmt.Print(errors.New(util.Fail("Invalid jump data! teamNum: %v, totalPg: %v", err1, err2)))
+		return
+	}
+	pageInput := ""
+	input, ok := interactions.GetComponentWithId(modal_data.Components, awardsJumpModalInputId).(*discordgo.TextInput)
+	if !ok {
+		fmt.Print(errors.New(util.Fail("Failed to get page input component")))
+		return
+	}
+
+	pageInput = input.Value
+	pageNum, err := strconv.Atoi(pageInput)
+	if err != nil || pageNum < 1 || pageNum > totalPg {
+		err := interactions.SendEphemeralMessage(s, i, fmt.Sprintf("Invalid page number. Please enter a number between 1 and %d (including the end values).", totalPg))
+		if err != nil {
+			fmt.Println(util.Fail("Failed to send ephemeral error message: %v", err))
+		}
+		return
+	}
+	pageNum -= 1 // convert to 0-indexed paging
+	embed := generateAwardsEmbed(teamNum, "", pageNum)
+	embeds := []*discordgo.MessageEmbed{embed}
+	var id_prev string = awardsPrevBtnIdFull(teamNum, pageNum, totalPg)
+	var id_jump string = awardsJumpBtnIdFull(teamNum, totalPg)
+	var id_next string = awardsNextBtnIdFull(teamNum, pageNum, totalPg)
+	components := []discordgo.MessageComponent{
+		interactions.CreatePaginationButtons(totalPg, pageNum, id_prev, id_jump, id_next),
+	}
+
+	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     embeds,
+			Components: components,
+		},
+	})
+	HandleErr(err)
+}
+
+func jumpToAwardsPageModal(s *discordgo.Session, i *discordgo.InteractionCreate, data string) {
+	parts := strings.Split(data, "_")
+	if len(parts) != 2 {
+		fmt.Print(errors.New(util.Fail("Invalid jump data format: %v", data)))
+		return
+	}
+
+	teamNum, err1 := strconv.Atoi(parts[0])
+	totalPg, err2 := strconv.Atoi(parts[1])
+
+	if err1 != nil || err2 != nil {
+		fmt.Print(errors.New(util.Fail("Invalid jump data! teamNum: %v, totalPg: %v", err1, err2)))
+		return
+	}
+
+	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseModal,
+		Data: &discordgo.InteractionResponseData{
+			CustomID: fmt.Sprintf(awardsJumpModalIdFull(teamNum, totalPg)),
+			Title: "Go to Page",
+			Components: []discordgo.MessageComponent{
+				discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.TextInput{
+							CustomID: awardsJumpModalInputId,
+							Label:    fmt.Sprintf("Enter a page number (1-%d):", totalPg),
+							Style: discordgo.TextInputShort,
+							Placeholder: "1",
+							Required: true,
+							MaxLength: 3,
+							MinLength: 1,
+						},
+					},
+				},
+			},
+		},
+	})
+
+	if HandleErr(err) {
+		err := interactions.SendEphemeralMessage(s, i, "Error displaying jump to page modal.")
+		if err != nil {
+			fmt.Println(util.Fail("Failed to send ephemeral error message: %v", err))
+		}
+	}
 }
 
 func saveAwardsToCache(teamNumber int, awards []TeamAward) {

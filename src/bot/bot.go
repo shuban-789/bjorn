@@ -90,7 +90,7 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		handleAutocomplete(s, i)
 
 	case discordgo.InteractionMessageComponent:
-		authorid, _ := interactions.GetAuthorId(nil, i)
+		authorid, _ := interactions.GetAuthorName(nil, i)
 		fmt.Println(util.Info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, authorid))
 		// NOTE: See src/bot/README.md for the format used in custom IDs
 		fields := strings.Fields(i.MessageComponentData().CustomID)
@@ -99,6 +99,21 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 				h(s, i, "")
 			} else {
 				h(s, i, fields[1])
+			}
+		}
+
+	case discordgo.InteractionModalSubmit:
+		authorid, _ := interactions.GetAuthorName(nil, i)
+		fmt.Println(util.Info("Received modal submit interaction: CustomID='%s', User='%s'", i.ModalSubmitData().CustomID, authorid))
+
+		// NOTE: See src/bot/README.md for the format used in custom IDs
+		var modalData discordgo.ModalSubmitInteractionData = i.ModalSubmitData()
+		fields := strings.Fields(modalData.CustomID)
+		if h, ok := modalHandlers[fields[0]]; ok {
+			if len(fields) == 1 { // no extra data
+				h(s, i, "", modalData)
+			} else {
+				h(s, i, fields[1], modalData)
 			}
 		}
 	}
