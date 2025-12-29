@@ -20,10 +20,11 @@ import (
 )
 
 var (
-	awardsPrevBtnId string = "team;awards_p"
-	awardsJumpBtnId  string = "team;awards_j_btn"
-	awardsJumpModalId  string = "team;awards_j_modal"
-	awardsNextBtnId  string = "team;awards_n"
+	awardsPaginatorPrefix string = "team;awards"
+	awardsPrevBtnId string = awardsPaginatorPrefix + "_pb"
+	awardsJumpBtnId  string = awardsPaginatorPrefix + "_jb"
+	awardsJumpModalId  string = awardsPaginatorPrefix + "_jm"
+	awardsNextBtnId  string = awardsPaginatorPrefix + "_nb"
 	awardsJumpModalInputId string = "page_input"
 
 	awardsPrevBtnIdFull = func(teamNum, pageNum, totalPg int) string { return fmt.Sprintf(awardsPrevBtnId + " %d_%d_%d", teamNum, pageNum, totalPg) }
