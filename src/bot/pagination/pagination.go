@@ -120,20 +120,6 @@ func (p *Paginator) GetAllComponentIdsWithData(state PaginationState) (id_prev, 
 	return
 }
 
-func getComponentType(customIdStart string) (PaginationInteractionType, error) {
-	if strings.HasSuffix(customIdStart, "_pb") {
-		return PREV_BUTTON, nil
-	} else if strings.HasSuffix(customIdStart, "_nb") {
-		return NEXT_BUTTON, nil
-	} else if strings.HasSuffix(customIdStart, "_jb") {
-		return JUMP_BUTTON, nil
-	} else if strings.HasSuffix(customIdStart, "_jm") {
-		return JUMP_MODAL, nil
-	} else {
-		return -1, fmt.Errorf("invalid pagination action")
-	}
-}
-
 func ParseCustomId(data []string) (currentPage int, totalPages int, extraData []string, err error) {
 	paginationParts := strings.SplitN(data[0], "_", 2)
 	if len(paginationParts) != 2 {
