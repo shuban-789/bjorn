@@ -1,3 +1,35 @@
+/*
+For fun I asked an AI to generate a model of the flow and it was actually kinda neat so I'm putting it here:
+
+User clicks button
+        │
+        ▼
+┌─────────────────────────┐
+│ interactions.handlers   │  Routes by custom ID prefix
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ Paginator.pageLeftRight │  Parses state from custom ID
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ Paginator.Update        │  Calls user-defined callback
+│ (updateAwardsEmbed)     │
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ Paginator.editMessage   │  Sends Discord API response
+└─────────────────────────┘
+
+Do note that this is only the flow for when you press the previous/next arrows though not the modal but the idea is the same thing basiclaly
+
+Also Paginator is a struct where Update is a field of type func, and updateAwardsEmbed is assigned
+to that so that you can have diff ways of generating the embeds for diff commands
+*/
+
 package pagination
 
 import (
@@ -100,6 +132,7 @@ func (p *Paginator) Setup(session *discordgo.Session, i *discordgo.InteractionCr
 
 // edits the message to reflect the new page
 // editMessage assumes that there's only one embed in the message
+// TODO: avoid panic if there are no embeds
 func (p *Paginator) editMessage(s *discordgo.Session, i *discordgo.InteractionCreate, state PaginationState) (err error) {
 	embed, err := p.Update(state, i.Message.Embeds[0])
 	if err != nil {
@@ -126,7 +159,7 @@ func (p *Paginator) launchJumpModal(s *discordgo.Session, i *discordgo.Interacti
 	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseModal,
 		Data: &discordgo.InteractionResponseData{
-			CustomID: fmt.Sprintf(p.GetComponentIdWithData(state, JUMP_MODAL)),
+			CustomID: p.GetComponentIdWithData(state, JUMP_MODAL),
 			Title: "Go to Page",
 			Components: []discordgo.MessageComponent{
 				discordgo.ActionsRow{

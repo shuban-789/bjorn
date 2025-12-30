@@ -2,7 +2,6 @@ package bot
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,10 +17,6 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/util"
 	"golang.org/x/sync/singleflight"
 )
-
-type awardsPaginationData struct {
-	teamNumber int
-}
 
 var (
 	awardsPaginator pagination.Paginator = pagination.Paginator{
@@ -454,7 +449,7 @@ func updateAwardsEmbed(state pagination.PaginationState, embed *discordgo.Messag
 	
 	awards, exists := getAwards(teamNumber)
 	if !exists {
-		return embed, errors.New(fmt.Sprintf("Awards cache miss for team %d", teamNumber))
+		return embed, fmt.Errorf("Awards cache miss for team %d", teamNumber)
 	}
 
 	embed.Footer = &discordgo.MessageEmbedFooter{
