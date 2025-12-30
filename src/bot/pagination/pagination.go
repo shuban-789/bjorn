@@ -74,7 +74,7 @@ func (p *Paginator) GetComponentId(interactionType PaginationInteractionType) st
 	case JUMP_MODAL:
 		return p.CustomIDPrefix + "_jm"
 	default:
-		return ""
+		panic("invalid pagination interaction type!")
 	}
 }
 

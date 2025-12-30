@@ -374,7 +374,12 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 		CurrentPage: 0,
 		ExtraData:   map[string]string{"teamNumber": fmt.Sprintf("%d", team.Number)},
 	}
-	awardsPaginator.Setup(session, i, channelID, initialState, team.Name)
+	err = awardsPaginator.Setup(session, i, channelID, initialState, team.Name)
+	if err != nil {
+		fmt.Println(util.Fail(err.Error()))
+		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to setup awards paginator for Team %s: %v", teamNumber, err))
+		return
+	}
 }
 
 func saveAwardsToCache(teamNumber int, awards []TeamAward) {

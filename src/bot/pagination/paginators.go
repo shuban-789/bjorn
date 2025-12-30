@@ -86,16 +86,16 @@ func (p *Paginator) prepareMessageContent(state PaginationState, embed *discordg
 	return
 }
 
-func (p *Paginator) Setup(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, initialState PaginationState, createParams ...any) {
+func (p *Paginator) Setup(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, initialState PaginationState, createParams ...any) error {
 	embed, err := p.Create(initialState, createParams...)
 	if err != nil {
-		fmt.Print(util.Fail("Error creating initial pagination embed: %v", err))
-		return
+		return fmt.Errorf("error creating initial pagination embed: %v", err)
 	}
 
 	embeds, components := p.prepareMessageContent(initialState, embed)
 
 	interactions.SendMessageComplex(session, i, channelID, "", &components, &embeds, false)
+	return nil
 }
 
 // edits the message to reflect the new page
