@@ -2,8 +2,6 @@ package pagination
 
 import (
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
@@ -84,13 +82,21 @@ func (p *Paginator) GetPaginationData(state PaginationState) string {
 	return  fmt.Sprintf("%d_%d", state.CurrentPage, state.TotalPages)
 }
 
-func (ps *PaginationState) GetExtraDataString() string {
-	values := slices.Collect(maps.Values(ps.ExtraData))
-	return  fmt.Sprintf(" %s",  fmt.Sprint(strings.Join(values, "_")))
+func (p *Paginator) GetExtraDataString(state PaginationState) string {
+    if len(p.ExtraDataKeys) == 0 {
+        return ""
+    }
+    values := make([]string, 0, len(p.ExtraDataKeys))
+    for _, key := range p.ExtraDataKeys {
+        if val, ok := state.ExtraData[key]; ok {
+            values = append(values, val)
+        }
+    }
+    return strings.Join(values, "_")
 }
 
 func (p *Paginator) GetComponentIdWithData(state PaginationState, interactionType PaginationInteractionType) string {
-	return p.GetComponentId(interactionType) + " " + p.GetPaginationData(state) + " " + state.GetExtraDataString()
+	return p.GetComponentId(interactionType) + " " + p.GetPaginationData(state) + " " + p.GetExtraDataString(state)
 }
 
 func (p *Paginator) GetAllComponentIds() (id_prev, id_jump_button, id_next, id_jump_modal string) {
