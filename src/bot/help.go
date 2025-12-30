@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "help",
 			Description: "Displays help information about the bot commands.",

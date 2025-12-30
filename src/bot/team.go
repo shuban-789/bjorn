@@ -14,32 +14,43 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/pagination"
 	"github.com/shuban-789/bjorn/src/bot/search"
 	"github.com/shuban-789/bjorn/src/bot/util"
 	"golang.org/x/sync/singleflight"
 )
 
+type awardsPaginationData struct {
+	teamNumber int
+}
+
 var (
-	awardsPaginatorPrefix string = "team;awards"
-	awardsPrevBtnId string = awardsPaginatorPrefix + "_pb"
-	awardsJumpBtnId  string = awardsPaginatorPrefix + "_jb"
-	awardsJumpModalId  string = awardsPaginatorPrefix + "_jm"
-	awardsNextBtnId  string = awardsPaginatorPrefix + "_nb"
-	awardsJumpModalInputId string = "page_input"
+	extraDataHandler = func(s []string) (awardsPaginationData, error) {
+		teamNum, err := strconv.Atoi(s[0])
+		if err != nil {
+			return awardsPaginationData{}, errors.New("failed to convert team number to int when processing extra data")
+		}
 
-	awardsPrevBtnIdFull = func(teamNum, pageNum, totalPg int) string { return fmt.Sprintf(awardsPrevBtnId + " %d_%d_%d", teamNum, pageNum, totalPg) }
-	awardsJumpBtnIdFull  = func(teamNum, totalPg int) string { return fmt.Sprintf(awardsJumpBtnId + " %d_%d", teamNum, totalPg) }
-	awardsJumpModalIdFull  = func(teamNum, totalPg int) string { return fmt.Sprintf(awardsJumpModalId + " %d_%d", teamNum, totalPg) }
-	awardsNextBtnIdFull  = func(teamNum, pageNum, totalPg int) string { return fmt.Sprintf(awardsNextBtnId + " %d_%d_%d", teamNum, pageNum, totalPg) }
+		return awardsPaginationData{
+			teamNumber: teamNum,
+		}, nil
+	}
+
+	awardsPaginator pagination.Paginator = pagination.Paginator{
+		CustomIDPrefix: "team;awards",
+		Create: generateAwardsEmbed,
+		Update: updateAwardsEmbed,
+		ExtraDataHandler: extraDataHandler,
+	}
+
+	// cache of team number to awards, used to reduce api calls
+	maxAwardsCacheSize int = 100  // I don't rlly want to use too much memory here
+	awardPersistenceDuration = time.Hour * 5
+	awardsCache = expirable.NewLRU[int, []TeamAward](maxAwardsCacheSize, nil, awardPersistenceDuration)
+	awardsCacheMu = &sync.Mutex{}   // btw this is bc the functions are goroutines so we don't want race conditions
+	awardsFlight singleflight.Group // this stops duplicate fetches for the same team bc if two people press the button at the same time it would make two requests which is dumb
+	awardsPerPage int = 5
 )
-
-// cache of team number to awards, used to reduce api calls
-var maxAwardsCacheSize int = 100             // I don't rlly want to use too much memory here
-var awardPersistenceDuration = time.Hour * 5 // in minutes
-var awardsCache = expirable.NewLRU[int, []TeamAward](maxAwardsCacheSize, nil, awardPersistenceDuration)
-var awardsCacheMu = &sync.Mutex{}   // btw this is bc the functions are goroutines so we don't want race conditions
-var awardsFlight singleflight.Group // this stops duplicate fetches for the same team bc if two people press the button at the same time it would make two requests which is dumb
-var awardsPerPage int = 5
 
 type TeamAward struct {
 	Season       int    `json:"season"`
@@ -54,7 +65,7 @@ type TeamAward struct {
 }
 
 func init() {
-	RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "team",
 			Description: "Provides information about a specific FTC team.",
@@ -116,7 +127,7 @@ func init() {
 						subName = ""
 					}
 
-					teamID := getStringOption(sub.Options, "team")
+					teamID := interactions.GetStringOption(sub.Options, "team")
 					if teamID == "" {
 						interactions.SendMessage(s, i, "", "Please provide a team number.")
 						return
@@ -131,22 +142,24 @@ func init() {
 		},
 	)
 
-	RegisterComponentHandler(awardsPrevBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
-		handleAwardsPagination(s, ic, data, -1)
-	})
+	RegisterPaginator(&awardsPaginator)
 
-	RegisterComponentHandler(awardsJumpBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
-		jumpToAwardsPageModal(s, ic, data)
-	})
+	// interactions.RegisterComponentHandler(awardsPrevBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+	// 	handleAwardsPagination(s, ic, data, -1)
+	// })
 
-	RegisterModalHandler(awardsJumpModalId, func (s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData) {
-		handleAwardsJump(s, i, id_data, modal_data)
-	})
+	// interactions.RegisterComponentHandler(awardsJumpBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+	// 	jumpToAwardsPageModal(s, ic, data)
+	// })
+
+	// interactions.RegisterModalHandler(awardsJumpModalId, func (s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData) {
+	// 	handleAwardsJump(s, i, id_data, modal_data)
+	// })
 
 
-	RegisterComponentHandler(awardsNextBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
-		handleAwardsPagination(s, ic, data, 1)
-	})
+	// interactions.RegisterComponentHandler(awardsNextBtnId, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data string) {
+	// 	handleAwardsPagination(s, ic, data, 1)
+	// })
 
 	searchAllTeamsAutocomplete := func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
 		results, err := search.SearchTeamNames(query, 25, "All")
@@ -165,9 +178,9 @@ func init() {
 		return choices
 	}
 
-	RegisterAutocomplete("team/stats/team", searchAllTeamsAutocomplete)
-	RegisterAutocomplete("team/awards/team", searchAllTeamsAutocomplete)
-	RegisterAutocomplete("team/info/team", searchAllTeamsAutocomplete)
+	interactions.RegisterAutocomplete("team/stats/team", searchAllTeamsAutocomplete)
+	interactions.RegisterAutocomplete("team/awards/team", searchAllTeamsAutocomplete)
+	interactions.RegisterAutocomplete("team/info/team", searchAllTeamsAutocomplete)
 }
 
 type TeamInfo struct {
@@ -582,7 +595,7 @@ func getAwards(teamNumber int) ([]TeamAward, bool) {
 	return fetchedAwards, true
 }
 
-func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *discordgo.MessageEmbed {
+func generateAwardsEmbed(state pagination.PaginationState) *discordgo.MessageEmbed {
 	embed := &discordgo.MessageEmbed{
 		Title:       fmt.Sprintf("Awards for Team %d (%s)", teamNumber, teamName),
 		Description: "Here are the awards this team has received:",
@@ -592,15 +605,20 @@ func generateAwardsEmbed(teamNumber int, teamName string, pageNumber int) *disco
 	return updateAwardsEmbed(teamNumber, pageNumber, embed)
 }
 
-func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed) *discordgo.MessageEmbed {
+// implements PageRenderer
+func updateAwardsEmbed(state pagination.PaginationState, embed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error) {
+	teamNumber, err := strconv.Atoi(state.ExtraData["teamNumber"])
+	if err != nil {
+		return embed, err
+	}
+	
 	awards, exists := getAwards(teamNumber)
 	if !exists {
-		fmt.Println(errors.New(util.Fail("Awards cache miss for team %d", teamNumber)))
-		return embed
+		return embed, errors.New(fmt.Sprintf("Awards cache miss for team %d", teamNumber))
 	}
 
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: fmt.Sprintf("Page %d of %d", pageNumber+1, (len(awards)+awardsPerPage-1)/awardsPerPage),
+		Text: fmt.Sprintf("Page %d of %d", state.CurrentPage+1, (len(awards)+awardsPerPage-1)/awardsPerPage),
 	}
 
 	embed.Fields = []*discordgo.MessageEmbedField{}
@@ -610,14 +628,14 @@ func updateAwardsEmbed(teamNumber, pageNumber int, embed *discordgo.MessageEmbed
 			Name:  "No Awards",
 			Value: "This team has not received any awards yet.",
 		})
-		return embed
+		return embed, nil
 	}
 
-	for _, award := range awards[pageNumber*awardsPerPage : min((pageNumber+1)*awardsPerPage, len(awards))] {
+	for _, award := range awards[state.CurrentPage*awardsPerPage : min((state.CurrentPage+1)*awardsPerPage, len(awards))] {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:  fmt.Sprintf("%s (%d)", award.Type, award.Season),
 			Value: fmt.Sprintf("Placement: %d\nEvent Code: %s", award.Placement, award.EventCode),
 		})
 	}
-	return embed
+	return embed, nil
 }

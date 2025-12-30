@@ -1,4 +1,4 @@
-package bot
+package interactions
 
 import (
 	"fmt"
@@ -7,10 +7,10 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
-var cmd_prefix = ">>"
+var CmdPrefix = ">>"
 
 // all the registered slash commands (populated by each command file's init())
-var commands []*discordgo.ApplicationCommand
+var Commands []*discordgo.ApplicationCommand
 
 var FtcYearChoices []*discordgo.ApplicationCommandOptionChoice = []*discordgo.ApplicationCommandOptionChoice{
 	{Name:  "2025-2026", Value: "2025"},
@@ -24,11 +24,11 @@ var FtcYearChoices []*discordgo.ApplicationCommandOptionChoice = []*discordgo.Ap
 
 // commandHandlers maps top-level command names to interaction handlers.
 type CommandHandler func(*discordgo.Session, *discordgo.InteractionCreate)
-var commandHandlers map[string]CommandHandler
+var CommandHandlers map[string]CommandHandler
 
 // map of top level cmds for custom autocomplete handlers so you can write more custom code if needed
 // basically this is just the old system but I didn't want to delete it just in case
-var autocompleteHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
+var AutocompleteHandlers map[string]func(*discordgo.Session, *discordgo.InteractionCreate)
 
 // func that returns a list of autocomplete choices given the current options
 // opts is the current options filled out (like the region in the match track command is used to get the list of events)
@@ -36,44 +36,44 @@ var autocompleteHandlers map[string]func(*discordgo.Session, *discordgo.Interact
 type AutocompleteProvider func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice
 
 // maps str of "command/subcommand/option" or "command/option" to the right function
-var autocompleteProviders map[string]AutocompleteProvider
+var AutocompleteProviders map[string]AutocompleteProvider
 
 // maps custom ID of component to handler func
 type ComponentHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, data string)
-var componentHandlers map[string]ComponentHandler
+var ComponentHandlers map[string]ComponentHandler
 
 // maps custom ID of modal to handler func
 type ModalHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData)
-var modalHandlers map[string]ModalHandler
+var ModalHandlers map[string]ModalHandler
 
 func RegisterCommand(cmd *discordgo.ApplicationCommand, handler CommandHandler) {
-	if commandHandlers == nil {
-		commandHandlers = make(map[string]CommandHandler)
+	if CommandHandlers == nil {
+		CommandHandlers = make(map[string]CommandHandler)
 	}
-	commands = append(commands, cmd)
-	commandHandlers[cmd.Name] = handler
+	Commands = append(Commands, cmd)
+	CommandHandlers[cmd.Name] = handler
 }
 
 // this is if you want to register a custom autocomplete handler for a command name, but it's better to use registerautocomplete now
 // I just kept this just in case
 func RegisterAutocompleteHandlerCustom(cmdName string, handler func(*discordgo.Session, *discordgo.InteractionCreate)) {
-	if autocompleteHandlers == nil {
-		autocompleteHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate))
+	if AutocompleteHandlers == nil {
+		AutocompleteHandlers = make(map[string]func(*discordgo.Session, *discordgo.InteractionCreate))
 	}
-	autocompleteHandlers[cmdName] = handler
+	AutocompleteHandlers[cmdName] = handler
 }
 
 // simpler autocomplete mapping system for a specific command/subcommand/option path.
 // path format: "command/subcommand/option" or "command/option" (for commands without subcommands)
 // provider func returns list of choices
 func RegisterAutocomplete(path string, provider AutocompleteProvider) {
-	if autocompleteProviders == nil {
-		autocompleteProviders = make(map[string]AutocompleteProvider)
+	if AutocompleteProviders == nil {
+		AutocompleteProviders = make(map[string]AutocompleteProvider)
 	}
-	autocompleteProviders[path] = provider
+	AutocompleteProviders[path] = provider
 }
 
-func handleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func HandleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	data := i.ApplicationCommandData()
 	cmdName := data.Name
 
@@ -121,7 +121,7 @@ func handleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		path = cmdName + "/" + focusedOpt.Name
 	}
 
-	provider, ok := autocompleteProviders[path]
+	provider, ok := AutocompleteProviders[path]
 	if !ok {
 		return
 	}
@@ -148,21 +148,21 @@ func handleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func RegisterComponentHandler(customID string, handler ComponentHandler) {
-	if componentHandlers == nil {
-		componentHandlers = make(map[string]ComponentHandler)
+	if ComponentHandlers == nil {
+		ComponentHandlers = make(map[string]ComponentHandler)
 	}
-	componentHandlers[customID] = handler
+	ComponentHandlers[customID] = handler
 }
 
 func RegisterModalHandler(customID string, handler ModalHandler) {
-	if modalHandlers == nil {
-		modalHandlers = make(map[string]ModalHandler)
+	if ModalHandlers == nil {
+		ModalHandlers = make(map[string]ModalHandler)
 	}
-	modalHandlers[customID] = handler
+	ModalHandlers[customID] = handler
 }
 
 // utility to get string option from interaction data options
-func getStringOption(opts []*discordgo.ApplicationCommandInteractionDataOption, name string) string {
+func GetStringOption(opts []*discordgo.ApplicationCommandInteractionDataOption, name string) string {
 	for _, o := range opts {
 		if o.Name == name && o.Value != nil {
 			if v, ok := o.Value.(string); ok {
@@ -171,7 +171,7 @@ func getStringOption(opts []*discordgo.ApplicationCommandInteractionDataOption, 
 		}
 		// if this option is a subcommand, search its children
 		if len(o.Options) > 0 {
-			if v := getStringOption(o.Options, name); v != "" {
+			if v := GetStringOption(o.Options, name); v != "" {
 				return v
 			}
 		}

@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "match",
 			Description: "Provides information and controls for matches.",
@@ -57,7 +57,7 @@ func init() {
 							Name:        "year",
 							Description: "Year of the event (e.g., 2025).",
 							Required:    true,
-							Choices:     FtcYearChoices,
+							Choices:     interactions.FtcYearChoices,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
@@ -77,7 +77,7 @@ func init() {
 							Name:        "year",
 							Description: "Year of the event (e.g., 2025).",
 							Required:    true,
-							Choices:     FtcYearChoices,
+							Choices:     interactions.FtcYearChoices,
 						},
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
@@ -108,25 +108,25 @@ func init() {
 			subName := sub.Name
 			switch subName {
 			case "info":
-				year := getStringOption(sub.Options, "year")
-				eventCode := getStringOption(sub.Options, "event_code")
-				matchNumber := getStringOption(sub.Options, "match_number")
+				year := interactions.GetStringOption(sub.Options, "year")
+				eventCode := interactions.GetStringOption(sub.Options, "event_code")
+				matchNumber := interactions.GetStringOption(sub.Options, "match_number")
 				if year == "" || eventCode == "" || matchNumber == "" {
 					interactions.SendMessage(s, i, "", "Usage: /match info <year> <event_code> <match_number>")
 					return
 				}
 				matchcmd(s, nil, i, []string{"info", year, eventCode, matchNumber})
 			case "eventstart":
-				year := getStringOption(sub.Options, "year")
-				eventCode := getStringOption(sub.Options, "event_code")
+				year := interactions.GetStringOption(sub.Options, "year")
+				eventCode := interactions.GetStringOption(sub.Options, "event_code")
 				if year == "" || eventCode == "" {
 					interactions.SendMessage(s, i, "", "Usage: /match eventstart <year> <event_code>")
 					return
 				}
 				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
 			case "track":
-				year := getStringOption(sub.Options, "year")
-				eventCode := getStringOption(sub.Options, "event")
+				year := interactions.GetStringOption(sub.Options, "year")
+				eventCode := interactions.GetStringOption(sub.Options, "event")
 				if year == "" || eventCode == "" {
 					interactions.SendMessage(s, i, "", "Usage: /match track <year> <region> <event_name>")
 					return
@@ -138,7 +138,7 @@ func init() {
 		},
 	)
 
-	RegisterAutocomplete("match/track/region", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+	interactions.RegisterAutocomplete("match/track/region", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
 		resultRegions := search.SearchRegionNames(query, 25)
 		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(resultRegions))
 		for _, region := range resultRegions {
@@ -150,7 +150,7 @@ func init() {
 		return choices
 	})
 
-	RegisterAutocomplete("match/track/event", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+	interactions.RegisterAutocomplete("match/track/event", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
 		regionCode := opts["region"]
 		if regionCode == "" {
 			return nil

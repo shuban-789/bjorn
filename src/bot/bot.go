@@ -49,7 +49,7 @@ func Deploy(token string) {
 	HandleErr(err)
 	fmt.Println(util.Success("Bot is running"))
 
-	_, err = session.ApplicationCommandBulkOverwrite(session.State.Application.ID, GuildId, commands)
+	_, err = session.ApplicationCommandBulkOverwrite(session.State.Application.ID, GuildId, interactions.Commands)
 	if err != nil {
 		fmt.Println(util.Fail("Cannot register commands: %v", err))
 	}
@@ -76,25 +76,25 @@ func Deploy(token string) {
 func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	switch i.Type {
 	case discordgo.InteractionApplicationCommand:
-		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+		if h, ok := interactions.CommandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
 		}
 	
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		// first see if a custom one exists
-		if h, ok := autocompleteHandlers[i.ApplicationCommandData().Name]; ok {
+		if h, ok := interactions.AutocompleteHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
 			return
 		}
 
-		handleAutocomplete(s, i)
+		interactions.HandleAutocomplete(s, i)
 
 	case discordgo.InteractionMessageComponent:
 		authorid, _ := interactions.GetAuthorName(nil, i)
 		fmt.Println(util.Info("Received component interaction: CustomID='%s', User='%s'", i.MessageComponentData().CustomID, authorid))
 		// NOTE: See src/bot/README.md for the format used in custom IDs
 		fields := strings.Fields(i.MessageComponentData().CustomID)
-		if h, ok := componentHandlers[fields[0]]; ok {
+		if h, ok := interactions.ComponentHandlers[fields[0]]; ok {
 			if len(fields) == 1 {
 				h(s, i, "")
 			} else {
@@ -109,7 +109,7 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		// NOTE: See src/bot/README.md for the format used in custom IDs
 		var modalData discordgo.ModalSubmitInteractionData = i.ModalSubmitData()
 		fields := strings.Fields(modalData.CustomID)
-		if h, ok := modalHandlers[fields[0]]; ok {
+		if h, ok := interactions.ModalHandlers[fields[0]]; ok {
 			if len(fields) == 1 { // no extra data
 				h(s, i, "", modalData)
 			} else {
@@ -133,7 +133,7 @@ func Tree(session *discordgo.Session, message *discordgo.MessageCreate) {
 	}
 
 	content := strings.TrimSpace(message.Content)
-	if after, ok := strings.CutPrefix(content, cmd_prefix); ok {
+	if after, ok := strings.CutPrefix(content, interactions.CmdPrefix); ok {
 		content = after
 		args := strings.Fields(content)
 		if len(args) == 0 {

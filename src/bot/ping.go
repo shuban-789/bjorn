@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "ping",
 			Description: "Checks the bot's responsiveness.",

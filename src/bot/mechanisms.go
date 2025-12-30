@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:                     "mech",
 			Description:              "Mechanic/admin commands for the bot.",

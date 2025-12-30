@@ -1,4 +1,4 @@
-package interactions
+package pagination
 
 import (
 	"fmt"
@@ -7,22 +7,34 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type Paginator struct {
-	TotalPages  int
-	CurrentPage int
-
+// A paginator creates paginated messages with buttons to navigate pages
+// It can read and write pagination state to customids
+type Paginator[T any] struct {
 	// e.g., "team;awards", keep this less than 30 chars max since total customid length is 100
 	CustomIDPrefix string
 
-	// has a function to render a page given a page number
-	Renderer PageRenderer
+	// for initial page render
+	Create CreatePage
 
-	// extra data to be stored in customid
-	ExtraData []string
+	// has a function to update a page given a page number
+	Update UpdatePage
+
+	ExtraDataHandler func([]string) (T, error)
 }
 
-type PageRenderer interface {
-	RenderPage(pageNum int) ([]*discordgo.MessageEmbed, error)
+// CreatePage is a function that takes in the pagination state and returns the embed for that page
+type CreatePage func(state PaginationState) (*discordgo.MessageEmbed, error)
+
+// UpdatePage is a function that takes in the pagination state and an embed to modify, and returns the modified embed
+type UpdatePage func(state PaginationState, embed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error)
+
+// PaginationState holds data about the pagination state, retrieved from customid
+type PaginationState struct {
+	TotalPages  int
+	CurrentPage int
+
+	// extra data to be stored in customid
+	ExtraData map[string]string
 }
 
 type PaginationInteractionType int
@@ -33,6 +45,8 @@ const (
 	NEXT_BUTTON
 	JUMP_MODAL
 )
+
+const jumpModalInputId string = "page_input"
 
 var interactionName = map[PaginationInteractionType]string{
     PREV_BUTTON: "prev_button",
@@ -47,8 +61,8 @@ func (pit PaginationInteractionType) String() string {
 // the customids will have 3 parts, the button name, the pagination data (page number, total pages), and extra data if any
 // 
 // e.g., "team;awards_pb 2_5 22105" for previous button on page 2 of 5 for team 22105's awards
-func (p *Paginator) RenderCurrentPage() ([]*discordgo.MessageEmbed, error) {
-	return p.Renderer.RenderPage(p.CurrentPage)
+func (p *Paginator) RenderCurrentPage(state PaginationState) (*discordgo.MessageEmbed, error) {
+	return p.Renderer.RenderPage(state.CurrentPage)
 }
 
 func (p *Paginator) GetComponentId(interactionType PaginationInteractionType) string {
@@ -66,23 +80,23 @@ func (p *Paginator) GetComponentId(interactionType PaginationInteractionType) st
 	}
 }
 
-func (p *Paginator) GetPaginationData() string {
-	return  fmt.Sprintf("%d_%d", p.CurrentPage, p.TotalPages)
+func (p *Paginator) GetPaginationData(state PaginationState) string {
+	return  fmt.Sprintf("%d_%d", state.CurrentPage, state.TotalPages)
 }
 
 func (p *Paginator) GetExtraDataString() string {
 	return  fmt.Sprintf(" %s",  fmt.Sprint(strings.Join(p.ExtraData, "_")))
 }
 
-func (p *Paginator) GetComponentIdWithData(interactionType PaginationInteractionType) string {
-	return p.GetComponentId(interactionType) + " " + p.GetPaginationData() + " " + p.GetExtraDataString()
+func (p *Paginator) GetComponentIdWithData(state PaginationState, interactionType PaginationInteractionType) string {
+	return p.GetComponentId(interactionType) + " " + p.GetPaginationData(state) + " " + p.GetExtraDataString()
 }
 
-func (p *Paginator) GetAllComponentIds() (id_prev, id_jump, id_next, id_jump_modal string) {
-	id_prev = p.GetComponentIdWithData(PREV_BUTTON)
-	id_jump = p.GetComponentIdWithData(JUMP_BUTTON)
-	id_next = p.GetComponentIdWithData(NEXT_BUTTON)
-	id_jump_modal = p.GetComponentIdWithData(JUMP_MODAL)
+func (p *Paginator) GetAllComponentIds(state PaginationState) (id_prev, id_jump, id_next, id_jump_modal string) {
+	id_prev = p.GetComponentIdWithData(state, PREV_BUTTON)
+	id_jump = p.GetComponentIdWithData(state, JUMP_BUTTON)
+	id_next = p.GetComponentIdWithData(state, NEXT_BUTTON)
+	id_jump_modal = p.GetComponentIdWithData(state, JUMP_MODAL)
 	return
 }
 
@@ -136,27 +150,48 @@ func ParseCustomId(data string) (interactionType PaginationInteractionType, curr
 	return
 }
 
-func CreatePaginationButtons(totalPages int, currentPage int, id_prev, id_jump, id_next string) discordgo.ActionsRow {
+func (p *Paginator) CreatePaginationButtons() discordgo.ActionsRow {
 	return discordgo.ActionsRow{
 		Components: []discordgo.MessageComponent{
 			&discordgo.Button{
 				Emoji:    &discordgo.ComponentEmoji{Name: "⬅️"},
 				Style:    discordgo.SecondaryButton,
-				CustomID: id_prev,
-				Disabled: currentPage == 0,
+				CustomID: p.GetComponentIdWithData(PREV_BUTTON),
+				Disabled: p.CurrentPage == 0,
 			},
 			&discordgo.Button{
 				Label:    "Go to Page",
 				Style:    discordgo.SecondaryButton,
-				CustomID: id_jump,
-				Disabled: totalPages < 2,
+				CustomID: p.GetComponentIdWithData(JUMP_BUTTON),
+				Disabled: p.TotalPages < 2,
 			},
 			&discordgo.Button{
 				Emoji:    &discordgo.ComponentEmoji{Name: "➡️"},
 				Style:    discordgo.SecondaryButton,
-				CustomID: id_next,
-				Disabled: currentPage >= totalPages-1,
+				CustomID: p.GetComponentIdWithData(NEXT_BUTTON),
+				Disabled: p.CurrentPage >= p.TotalPages-1,
 			},
 		},
 	}
+}
+
+func (p *Paginator) SendPaginatedMessage(s *discordgo.Session, i *discordgo.InteractionCreate, channelID string) (err error) {
+	embed, err := p.RenderCurrentPage()
+	if err != nil {
+		return
+	}
+	embeds := []*discordgo.MessageEmbed{embed}
+
+	components := []discordgo.MessageComponent{
+		p.CreatePaginationButtons(),
+	}
+
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseUpdateMessage,
+		Data: &discordgo.InteractionResponseData{
+			Embeds:     embeds,
+			Components: components,
+		},
+	})
+	return nil
 }

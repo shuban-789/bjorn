@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	RegisterCommand(
+	interactions.interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "lead",
 			Description: "Display the leaderboard for a certain event.",
@@ -36,8 +36,8 @@ func init() {
 		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
 			data := i.ApplicationCommandData()
-			year := getStringOption(data.Options, "year")
-			eventCode := getStringOption(data.Options, "event_code")
+			year := interactions.GetStringOption(data.Options, "year")
+			eventCode := interactions.GetStringOption(data.Options, "event_code")
 			if year == "" || eventCode == "" {
 				interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
 				return

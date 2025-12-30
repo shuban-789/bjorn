@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "roleme",
 			Description: "Assigns you a role based on your team ID.",
@@ -34,7 +34,7 @@ func init() {
 		func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
 			data := i.ApplicationCommandData()
-			teamID := getStringOption(data.Options, "team")
+			teamID := interactions.GetStringOption(data.Options, "team")
 			if teamID == "" {
 				interactions.SendMessage(s, i, "", "Please provide a team number.")
 				return
@@ -44,7 +44,7 @@ func init() {
 	)
 
 	// Team autocomplete for /roleme team
-	RegisterAutocomplete("roleme/team", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+	interactions.RegisterAutocomplete("roleme/team", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
 		results, err := search.SearchTeamNames(query, 25, "USCASD")
 		if err != nil {
 			fmt.Println(util.Fail("Error searching team names: %v", err))
