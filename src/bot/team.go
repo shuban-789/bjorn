@@ -18,14 +18,9 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-var (
-	awardsPaginator pagination.Paginator = pagination.Paginator{
-		CustomIDPrefix: "team;awards",
-		Create: generateAwardsEmbed,
-		Update: updateAwardsEmbed,
-		ExtraDataKeys: []string{"teamNumber"},
-	}
+var awardsPaginator *pagination.Paginator
 
+var (
 	// cache of team number to awards, used to reduce api calls
 	maxAwardsCacheSize int = 100  // I don't rlly want to use too much memory here
 	awardPersistenceDuration = time.Hour * 5
@@ -125,7 +120,12 @@ func init() {
 		},
 	)
 
-	awardsPaginator.Register()
+	// ew go makes you put the period at the end or it assumes new line
+	awardsPaginator = pagination.New("team;awards").
+						AddExtraKey("teamNumber").
+						OnCreate(generateAwardsEmbed).
+						OnUpdate(updateAwardsEmbed).
+						Register()
 
 	searchAllTeamsAutocomplete := func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
 		results, err := search.SearchTeamNames(query, 25, "All")
