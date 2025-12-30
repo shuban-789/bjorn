@@ -96,7 +96,12 @@ func (p *Paginator) GetExtraDataString(state PaginationState) string {
 }
 
 func (p *Paginator) GetComponentIdWithData(state PaginationState, interactionType PaginationInteractionType) string {
-	return p.GetComponentId(interactionType) + " " + p.GetPaginationData(state) + " " + p.GetExtraDataString(state)
+    retval := p.GetComponentId(interactionType) + " " + p.GetPaginationData(state)
+    extra := p.GetExtraDataString(state)
+    if extra != "" {
+        return retval + " " + extra
+    }
+    return retval
 }
 
 func (p *Paginator) GetAllComponentIds() (id_prev, id_jump_button, id_next, id_jump_modal string) {
