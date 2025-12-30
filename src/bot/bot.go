@@ -96,9 +96,9 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		fields := strings.Fields(i.MessageComponentData().CustomID)
 		if h, ok := interactions.ComponentHandlers[fields[0]]; ok {
 			if len(fields) == 1 {
-				h(s, i, "")
+				h(s, i, []string{""})
 			} else {
-				h(s, i, fields[1])
+				h(s, i, fields[1:])
 			}
 		}
 
@@ -111,9 +111,9 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		fields := strings.Fields(modalData.CustomID)
 		if h, ok := interactions.ModalHandlers[fields[0]]; ok {
 			if len(fields) == 1 { // no extra data
-				h(s, i, "", modalData)
+				h(s, i, []string{}, modalData)
 			} else {
-				h(s, i, fields[1], modalData)
+				h(s, i, fields[1:], modalData)
 			}
 		}
 	}

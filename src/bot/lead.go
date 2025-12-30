@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	interactions.interactions.RegisterCommand(
+	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
 			Name:        "lead",
 			Description: "Display the leaderboard for a certain event.",

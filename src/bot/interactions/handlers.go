@@ -39,11 +39,11 @@ type AutocompleteProvider func(opts map[string]string, query string) []*discordg
 var AutocompleteProviders map[string]AutocompleteProvider
 
 // maps custom ID of component to handler func
-type ComponentHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, data string)
+type ComponentHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, data []string)
 var ComponentHandlers map[string]ComponentHandler
 
 // maps custom ID of modal to handler func
-type ModalHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, id_data string, modal_data discordgo.ModalSubmitInteractionData)
+type ModalHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, id_data []string, modal_data discordgo.ModalSubmitInteractionData)
 var ModalHandlers map[string]ModalHandler
 
 func RegisterCommand(cmd *discordgo.ApplicationCommand, handler CommandHandler) {
