@@ -453,7 +453,7 @@ func updateAwardsEmbed(state pagination.PaginationState, embed *discordgo.Messag
 	}
 
 	embed.Footer = &discordgo.MessageEmbedFooter{
-		Text: fmt.Sprintf("Page %d of %d", state.CurrentPage+1, (len(awards)+awardsPerPage-1)/awardsPerPage),
+		Text: fmt.Sprintf("Page %d of %d", state.CurrentPage+1, state.TotalPages),
 	}
 
 	embed.Fields = []*discordgo.MessageEmbedField{}

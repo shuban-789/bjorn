@@ -29,6 +29,16 @@ func (pb *PaginationBuilder) OnUpdate(updateFunc UpdatePage) *PaginationBuilder 
 }
 
 func (pb *PaginationBuilder) Register() *Paginator {
+	if pb.Paginator.Create == nil {
+		panic("Paginator.Create is required")
+	}
+	if pb.Paginator.Update == nil {
+		panic("Paginator.Update is required")
+	}
+	if pb.Paginator.CustomIDPrefix == "" {
+		panic("Paginator.CustomIDPrefix is required")
+	}
+
 	pb.Paginator.Register()
 	return pb.Paginator
 }
