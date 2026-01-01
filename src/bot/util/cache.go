@@ -40,8 +40,8 @@ func NewCache[V any](maxSize int, persistenceDuration time.Duration, fetch Fetch
 	}
 }
 
-// Get gets the value for the given key from the cache, fetching it if not present
-func (c *Cache[V]) Get(key string) (V, error) {
+// GetOrFetch gets the value for the given key from the cache, fetching it if not present
+func (c *Cache[V]) GetOrFetch(key string) (V, error) {
 	c.mu.Lock()
 	if val, exists := c.lru.Get(key); exists {
 		c.mu.Unlock()

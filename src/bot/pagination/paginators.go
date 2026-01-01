@@ -41,7 +41,7 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
-func (p *Paginator) Register() {
+func (p *Paginator[T]) Register() {
 	id_prev, id_jump_button, id_next, id_jump_modal := p.GetAllComponentIds()
 
 	interactions.RegisterComponentHandler(id_prev, func(s *discordgo.Session, ic *discordgo.InteractionCreate, data []string) {
@@ -73,7 +73,7 @@ func (p *Paginator) Register() {
 	})
 }
 
-func (p *Paginator) pageLeftRight(s *discordgo.Session, ic *discordgo.InteractionCreate, data []string, delta int) error {
+func (p *Paginator[T]) pageLeftRight(s *discordgo.Session, ic *discordgo.InteractionCreate, data []string, delta int) error {
 	state, err := p.GetStateFromCustomId(data)
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func (p *Paginator) pageLeftRight(s *discordgo.Session, ic *discordgo.Interactio
 }
 
 
-func (p *Paginator) handleJumpModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate, id_data []string, modal_data discordgo.ModalSubmitInteractionData) error {
+func (p *Paginator[T]) handleJumpModalSubmit(s *discordgo.Session, i *discordgo.InteractionCreate, id_data []string, modal_data discordgo.ModalSubmitInteractionData) error {
 	state, err := p.GetStateFromCustomId(id_data)
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func (p *Paginator) handleJumpModalSubmit(s *discordgo.Session, i *discordgo.Int
 	return p.editMessage(s, i, state)
 }
 
-func (p *Paginator) prepareMessageContent(state PaginationState, embed *discordgo.MessageEmbed) (embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent) {
+func (p *Paginator[T]) prepareMessageContent(state PaginationState, embed *discordgo.MessageEmbed) (embeds []*discordgo.MessageEmbed, components []discordgo.MessageComponent) {
 	embeds = []*discordgo.MessageEmbed{embed}
 	components = []discordgo.MessageComponent{
 		p.CreatePaginationButtons(state),
@@ -118,8 +118,24 @@ func (p *Paginator) prepareMessageContent(state PaginationState, embed *discordg
 	return
 }
 
-func (p *Paginator) Setup(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, initialState PaginationState, createParams ...any) error {
-	embed, err := p.Create(initialState, createParams...)
+func (p *Paginator[T]) Setup(session *discordgo.Session, i *discordgo.InteractionCreate, channelID string, extraData map[string]string, createParams ...any) error {
+	initialState := PaginationState{
+		CurrentPage: 0,
+		ExtraData:   extraData,
+	}
+	
+	data, err := p.GetData(initialState)
+	if err != nil {
+		return fmt.Errorf("error getting initial data: %v", err)
+	}
+	initialState.TotalPages = p.CalculateTotalPages(len(data))
+
+	pageData, err := p.GetPageData(initialState)
+	if err != nil {
+		return fmt.Errorf("error getting initial page data: %v", err)
+	}
+
+	embed, err := p.Create(initialState, pageData, createParams...)
 	if err != nil {
 		return fmt.Errorf("error creating initial pagination embed: %v", err)
 	}
@@ -133,8 +149,13 @@ func (p *Paginator) Setup(session *discordgo.Session, i *discordgo.InteractionCr
 // edits the message to reflect the new page
 // editMessage assumes that there's only one embed in the message
 // TODO: avoid panic if there are no embeds
-func (p *Paginator) editMessage(s *discordgo.Session, i *discordgo.InteractionCreate, state PaginationState) (err error) {
-	embed, err := p.Update(state, i.Message.Embeds[0])
+func (p *Paginator[T]) editMessage(s *discordgo.Session, i *discordgo.InteractionCreate, state PaginationState) (err error) {
+	data, err := p.GetPageData(state)
+	if err != nil {
+		return fmt.Errorf("error getting page data: %v", err)
+	}
+
+	embed, err := p.Update(state, data, i.Message.Embeds[0])
 	if err != nil {
 		return
 	}
@@ -150,7 +171,7 @@ func (p *Paginator) editMessage(s *discordgo.Session, i *discordgo.InteractionCr
 	return
 }
 
-func (p *Paginator) launchJumpModal(s *discordgo.Session, i *discordgo.InteractionCreate, data []string) error {
+func (p *Paginator[T]) launchJumpModal(s *discordgo.Session, i *discordgo.InteractionCreate, data []string) error {
 	state, err := p.GetStateFromCustomId(data)
 	if err != nil {
 		return err

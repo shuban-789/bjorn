@@ -11,25 +11,34 @@ const jumpModalInputId string = "page_input"
 
 // A paginator creates paginated messages with buttons to navigate pages
 // It can read and write pagination state to customids
-type Paginator struct {
+type Paginator[T any] struct {
 	// e.g., "team;awards", keep this less than 30 chars max since total customid length is 100
 	CustomIDPrefix string
 
+	ItemsPerPage int
+
+	// gets all the data, which is sliced and passed into updatepage
+	// this should NOT rely on current page info or total pages bc it's supposed to get all data
+	// instead, it should use extra data from PaginationState.ExtraData if needed
+	GetData DataGetter[T]
+
 	// for initial page render
-	Create CreatePage
+	Create CreatePage[T]
 
 	// has a function to update a page given a page number
-	Update UpdatePage
+	Update UpdatePage[T]
 
 	// These keys are the keys used to access extra data in PaginationState.ExtraData
 	ExtraDataKeys []string
 }
 
+type DataGetter[T any] func(state PaginationState) ([]T, error)
+
 // CreatePage is a function that takes in the pagination state and returns the embed for that page
-type CreatePage func(state PaginationState, createParams ...any) (*discordgo.MessageEmbed, error)
+type CreatePage[T any] func(state PaginationState, data []T, createParams ...any) (*discordgo.MessageEmbed, error)
 
 // UpdatePage is a function that takes in the pagination state and an embed to modify, and returns the modified embed
-type UpdatePage func(state PaginationState, embed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error)
+type UpdatePage[T any] func(state PaginationState, data []T, embed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error)
 
 // PaginationState holds data about the pagination state, retrieved from customid
 type PaginationState struct {
@@ -63,7 +72,7 @@ func (pit PaginationInteractionType) String() string {
 // 
 // e.g., "team;awards_pb 2_5 22105" for previous button on page 2 of 5 for team 22105's awards
 
-func (p *Paginator) GetComponentId(interactionType PaginationInteractionType) string {
+func (p *Paginator[T]) GetComponentId(interactionType PaginationInteractionType) string {
 	switch interactionType {
 	case PREV_BUTTON:
 		return p.CustomIDPrefix + "_pb"
@@ -78,11 +87,11 @@ func (p *Paginator) GetComponentId(interactionType PaginationInteractionType) st
 	}
 }
 
-func (p *Paginator) GetPaginationData(state PaginationState) string {
+func (p *Paginator[T]) GetPaginationData(state PaginationState) string {
 	return  fmt.Sprintf("%d_%d", state.CurrentPage, state.TotalPages)
 }
 
-func (p *Paginator) GetExtraDataString(state PaginationState) string {
+func (p *Paginator[T]) GetExtraDataString(state PaginationState) string {
     if len(p.ExtraDataKeys) == 0 {
         return ""
     }
@@ -95,7 +104,7 @@ func (p *Paginator) GetExtraDataString(state PaginationState) string {
     return strings.Join(values, "_")
 }
 
-func (p *Paginator) GetComponentIdWithData(state PaginationState, interactionType PaginationInteractionType) string {
+func (p *Paginator[T]) GetComponentIdWithData(state PaginationState, interactionType PaginationInteractionType) string {
     retval := p.GetComponentId(interactionType) + " " + p.GetPaginationData(state)
     extra := p.GetExtraDataString(state)
     if extra != "" {
@@ -104,7 +113,7 @@ func (p *Paginator) GetComponentIdWithData(state PaginationState, interactionTyp
     return retval
 }
 
-func (p *Paginator) GetAllComponentIds() (id_prev, id_jump_button, id_next, id_jump_modal string) {
+func (p *Paginator[T]) GetAllComponentIds() (id_prev, id_jump_button, id_next, id_jump_modal string) {
 	id_prev = p.GetComponentId(PREV_BUTTON)
 	id_jump_button = p.GetComponentId(JUMP_BUTTON)
 	id_next = p.GetComponentId(NEXT_BUTTON)
@@ -112,7 +121,7 @@ func (p *Paginator) GetAllComponentIds() (id_prev, id_jump_button, id_next, id_j
 	return
 }
 
-func (p *Paginator) GetAllComponentIdsWithData(state PaginationState) (id_prev, id_jump, id_next, id_jump_modal string) {
+func (p *Paginator[T]) GetAllComponentIdsWithData(state PaginationState) (id_prev, id_jump, id_next, id_jump_modal string) {
 	id_prev = p.GetComponentIdWithData(state, PREV_BUTTON)
 	id_jump = p.GetComponentIdWithData(state, JUMP_BUTTON)
 	id_next = p.GetComponentIdWithData(state, NEXT_BUTTON)
@@ -145,7 +154,7 @@ func ParseCustomId(data []string) (currentPage int, totalPages int, extraData []
 	return
 }
 
-func (p *Paginator) GetStateFromCustomId(data []string) (state PaginationState, err error) {
+func (p *Paginator[T]) GetStateFromCustomId(data []string) (state PaginationState, err error) {
 	currentPage, totalPages, extraData, err := ParseCustomId(data)
 	if err != nil {
 		return
@@ -165,7 +174,7 @@ func (p *Paginator) GetStateFromCustomId(data []string) (state PaginationState, 
 	return
 }
 
-func (p *Paginator) CreatePaginationButtons(state PaginationState) discordgo.ActionsRow {
+func (p *Paginator[T]) CreatePaginationButtons(state PaginationState) discordgo.ActionsRow {
 	return discordgo.ActionsRow{
 		Components: []discordgo.MessageComponent{
 			&discordgo.Button{
@@ -188,4 +197,19 @@ func (p *Paginator) CreatePaginationButtons(state PaginationState) discordgo.Act
 			},
 		},
 	}
+}
+
+func (p *Paginator[T]) GetPageData(state PaginationState) ([]T, error) {
+	allData, err := p.GetData(state)
+	if err != nil {
+		return nil, err
+	}
+
+	startIdx := state.CurrentPage*p.ItemsPerPage
+	endIdx := min((state.CurrentPage+1)*p.ItemsPerPage, len(allData))
+	return allData[startIdx:endIdx], nil
+}
+
+func (p *Paginator[T]) CalculateTotalPages(totalItems int) int {
+	return (totalItems + p.ItemsPerPage - 1) / p.ItemsPerPage
 }

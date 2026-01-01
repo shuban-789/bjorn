@@ -15,7 +15,7 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
-var awardsPaginator *pagination.Paginator
+var awardsPaginator *pagination.Paginator[TeamAward]
 
 var (
 	awardsCache = util.NewCache(
@@ -23,7 +23,6 @@ var (
 		time.Hour*5,
 		fetchTeamAwards,
 	)
-	awardsPerPage int = 5
 )
 
 type TeamAward struct {
@@ -117,7 +116,12 @@ func init() {
 	)
 
 	// ew go makes you put the period at the end or it assumes new line
-	awardsPaginator = pagination.New("team;awards").
+	awardsPaginator = pagination.New[TeamAward]("team;awards").
+						ItemsPerPage(5).
+						WithDataGetter(func(state pagination.PaginationState) ([]TeamAward, error) {
+							teamNumber := state.ExtraData["teamNumber"]
+							return awardsCache.GetOrFetch(teamNumber)
+						}).
 						AddExtraKey("teamNumber").
 						OnCreate(generateAwardsEmbed).
 						OnUpdate(updateAwardsEmbed).
@@ -351,17 +355,9 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Error: %v", err))
 		return
 	}
-
-	teamNumberStr := fmt.Sprintf("%d", team.Number)
 	
-	awards, err := awardsCache.Get(teamNumberStr)
-	
-	initialState := pagination.PaginationState{
-		TotalPages:  (len(awards) + awardsPerPage - 1) / awardsPerPage,
-		CurrentPage: 0,
-		ExtraData:   map[string]string{"teamNumber": fmt.Sprintf("%d", team.Number)},
-	}
-	err = awardsPaginator.Setup(session, i, channelID, initialState, team.Name)
+	extraData := map[string]string{"teamNumber": fmt.Sprintf("%d", team.Number)}
+	err = awardsPaginator.Setup(session, i, channelID, extraData, team.Name)
 	if err != nil {
 		fmt.Println(util.Fail(err.Error()))
 		interactions.SendMessage(session, i, channelID, fmt.Sprintf("Failed to setup awards paginator for Team %s: %v", teamNumber, err))
@@ -369,7 +365,7 @@ func teamAwards(channelID string, teamNumber string, session *discordgo.Session,
 	}
 }
 
-func generateAwardsEmbed(state pagination.PaginationState, params ...any) (*discordgo.MessageEmbed, error) {
+func generateAwardsEmbed(state pagination.PaginationState, pageAwards []TeamAward, params ...any) (*discordgo.MessageEmbed, error) {
 	teamNumberStr := state.ExtraData["teamNumber"]
 	teamNum, err := strconv.Atoi(teamNumberStr)
 	if err != nil {
@@ -383,25 +379,18 @@ func generateAwardsEmbed(state pagination.PaginationState, params ...any) (*disc
 		Color:       0x72cfdd,
 	}
 
-	return updateAwardsEmbed(state, embed)
+	return updateAwardsEmbed(state, pageAwards, embed)
 }
 
 // implements PageRenderer
-func updateAwardsEmbed(state pagination.PaginationState, embed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error) {
-	teamNumber := state.ExtraData["teamNumber"]
-	
-	awards, err := awardsCache.Get(teamNumber)
-	if err != nil {
-		return embed, err
-	}
-
+func updateAwardsEmbed(state pagination.PaginationState, pageAwards []TeamAward, embed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error) {
 	embed.Footer = &discordgo.MessageEmbedFooter{
 		Text: fmt.Sprintf("Page %d of %d", state.CurrentPage+1, state.TotalPages),
 	}
 
 	embed.Fields = []*discordgo.MessageEmbedField{}
 
-	if len(awards) == 0 {
+	if len(pageAwards) == 0 {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:  "No Awards",
 			Value: "This team has not received any awards yet.",
@@ -409,7 +398,7 @@ func updateAwardsEmbed(state pagination.PaginationState, embed *discordgo.Messag
 		return embed, nil
 	}
 
-	for _, award := range awards[state.CurrentPage*awardsPerPage : min((state.CurrentPage+1)*awardsPerPage, len(awards))] {
+	for _, award := range pageAwards {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
 			Name:  fmt.Sprintf("%s (%d)", award.Type, award.Season),
 			Value: fmt.Sprintf("Placement: %d\nEvent Code: %s", award.Placement, award.EventCode),
