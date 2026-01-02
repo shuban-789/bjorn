@@ -11,7 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 	"github.com/shuban-789/bjorn/src/bot/pagination"
-	"github.com/shuban-789/bjorn/src/bot/search"
+	"github.com/shuban-789/bjorn/src/bot/presets"
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
@@ -128,26 +128,9 @@ func init() {
 						OnUpdate(updateAwardsEmbed).
 						Register()
 
-	searchAllTeamsAutocomplete := func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
-		results, err := search.SearchTeamNames(query, 25, "All")
-		if err != nil {
-			fmt.Println(util.Fail("Error searching team names: %v", err))
-			return nil
-		}
-
-		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
-		for _, team := range results {
-			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-				Name:  fmt.Sprintf("%d %s", team.Number, team.Name),
-				Value: fmt.Sprint(team.Number),
-			})
-		}
-		return choices
-	}
-
-	interactions.RegisterAutocomplete("team/stats/team", searchAllTeamsAutocomplete)
-	interactions.RegisterAutocomplete("team/awards/team", searchAllTeamsAutocomplete)
-	interactions.RegisterAutocomplete("team/info/team", searchAllTeamsAutocomplete)
+	interactions.RegisterAutocomplete("team/stats/team", presets.TeamsAutocomplete)
+	interactions.RegisterAutocomplete("team/awards/team", presets.TeamsAutocomplete)
+	interactions.RegisterAutocomplete("team/info/team", presets.TeamsAutocomplete)
 }
 
 type TeamInfo struct {

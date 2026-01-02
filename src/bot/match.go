@@ -12,6 +12,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/presets"
 	"github.com/shuban-789/bjorn/src/bot/search"
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
@@ -138,33 +139,9 @@ func init() {
 		},
 	)
 
-	interactions.RegisterAutocomplete("match/track/region", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
-		resultRegions := search.SearchRegionNames(query, 25)
-		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(resultRegions))
-		for _, region := range resultRegions {
-			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-				Name:  region.Name,
-				Value: region.Code,
-			})
-		}
-		return choices
-	})
+	interactions.RegisterAutocomplete("match/track/region", presets.RegionAutocomplete)
 
-	interactions.RegisterAutocomplete("match/track/event", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
-		regionCode := opts["region"]
-		if regionCode == "" {
-			return nil
-		}
-		results := search.SearchEventNames(query, 25, regionCode, false)
-		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
-		for _, event := range results {
-			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-				Name:  event.Name,
-				Value: event.Code,
-			})
-		}
-		return choices
-	})
+	interactions.RegisterAutocomplete("match/track/event", presets.EventAutocomplete)
 }
 
 type AllianceColor int

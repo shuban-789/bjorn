@@ -37,12 +37,21 @@ func init() {
 					Name:        "year",
 					Description: "Year of the event (e.g., 2025).",
 					Required:    true,
+					Choices: interactions.FtcYearChoices,
 				},
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "event_code",
-					Description: "Event code to look up.",
+					Name:        "region",
+					Description: "The region the event is in (e.g., San Diego).",
 					Required:    true,
+					Autocomplete: true,
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "event",
+					Description: "Event to look up.",
+					Required:    true,
+					Autocomplete: true,
 				},
 			},
 		},
@@ -50,12 +59,12 @@ func init() {
 			_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
 			data := i.ApplicationCommandData()
 			year := interactions.GetStringOption(data.Options, "year")
-			eventCode := interactions.GetStringOption(data.Options, "event_code")
-			if year == "" || eventCode == "" {
-				interactions.SendMessage(s, i, "", "Usage: /lead <year> <event_code>")
+			event := interactions.GetStringOption(data.Options, "event")
+			if year == "" || event == "" {
+				interactions.SendMessage(s, i, "", "Usage: /lead <year> <region> <event>")
 				return
 			}
-			leadcmd(s, nil, i, []string{year, eventCode})
+			leadcmd(s, nil, i, []string{year, event})
 		},
 	)
 
@@ -70,6 +79,12 @@ func init() {
 						return leadCache.GetOrFetch(fmt.Sprintf("%s %s", year, eventCode))
 					}).
 					Register();
+	
+	// interactions.RegisterAutocomplete("lead/event", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+	// 	year := opts["year"]
+
+	// })
+	
 }
 
 type TeamRank struct {
