@@ -39,9 +39,6 @@ func (pb *PaginationBuilder[T]) WithDataGetter(getter func(state PaginationState
 }
 
 func (pb *PaginationBuilder[T]) Register() *Paginator[T] {
-	if pb.Paginator.Create == nil {
-		panic("Paginator.Create is required")
-	}
 	if pb.Paginator.Update == nil {
 		panic("Paginator.Update is required")
 	}

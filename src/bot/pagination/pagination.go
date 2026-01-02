@@ -22,7 +22,7 @@ type Paginator[T any] struct {
 	// instead, it should use extra data from PaginationState.ExtraData if needed
 	GetData DataGetter[T]
 
-	// for initial page render
+	// for initial page render, if nil uses Update instead
 	Create CreatePage[T]
 
 	// has a function to update a page given a page number

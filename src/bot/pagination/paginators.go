@@ -135,7 +135,17 @@ func (p *Paginator[T]) Setup(session *discordgo.Session, i *discordgo.Interactio
 		return fmt.Errorf("error getting initial page data: %v", err)
 	}
 
-	embed, err := p.Create(initialState, pageData, createParams...)
+	// if create is nil, default to update (used in lead command)
+	var embed *discordgo.MessageEmbed
+	if p.Create == nil {
+		if len(createParams) != 0 {
+			return fmt.Errorf("Paginator.Create is nil, but createParams were provided")
+		}
+
+		embed, err = p.Update(initialState, pageData, nil)
+	} else {
+		embed, err = p.Create(initialState, pageData, createParams...)
+	}
 	if err != nil {
 		return fmt.Errorf("error creating initial pagination embed: %v", err)
 	}

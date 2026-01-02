@@ -15,9 +15,10 @@ import (
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
-var awardsPaginator *pagination.Paginator[TeamAward]
 
 var (
+	awardsPaginator *pagination.Paginator[TeamAward]
+	
 	awardsCache = util.NewCache(
 		100,
 		time.Hour*5,

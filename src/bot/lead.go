@@ -7,10 +7,23 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/pagination"
 	"github.com/shuban-789/bjorn/src/bot/util"
+)
+
+var (
+	leadPaginator *pagination.Paginator[TeamRank]
+	
+	leadCache = util.NewCache(
+		100,
+		time.Hour*5,
+		getLeaderboardInfo,
+	)
 )
 
 func init() {
@@ -45,10 +58,18 @@ func init() {
 			leadcmd(s, nil, i, []string{year, eventCode})
 		},
 	)
-}
 
-type TeamStats struct {
-	Rank int `json:"rank"`
+	leadPaginator = pagination.New[TeamRank]("lead").
+					ItemsPerPage(10).
+					AddExtraKey("year").
+					AddExtraKey("eventCode").
+					OnUpdate(updateLeaderboard).
+					WithDataGetter(func(state pagination.PaginationState) ([]TeamRank, error) {
+						year := state.ExtraData["year"]
+						eventCode := state.ExtraData["eventCode"]
+						return leadCache.GetOrFetch(fmt.Sprintf("%s %s", year, eventCode))
+					}).
+					Register();
 }
 
 type TeamRank struct {
@@ -70,13 +91,6 @@ func (s TeamRankSlice) Less(i, j int) bool {
 	return s[i].Rank < s[j].Rank
 }
 
-func min(x, y int) int {
-	if x < y {
-		return x
-	}
-	return y
-}
-
 func leadcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *discordgo.InteractionCreate, args []string) {
 	channelId := interactions.GetChannelId(message, i)
 	if len(args) < 2 {
@@ -84,12 +98,21 @@ func leadcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *di
 		return
 	}
 
-	year := args[0]
-	eventCode := args[1]
-	showLeaderboard(channelId, i, year, eventCode, session)
+	err := leadPaginator.Setup(session, i, channelId, map[string]string{
+		"year":      args[0],
+		"eventCode": args[1],
+	})
+	if err != nil {
+		interactions.SendMessage(session, i, channelId, fmt.Sprintf("Error sending leaderboard: %v", err))
+	}
 }
 
-func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
+func getLeaderboardInfo(key string) ([]TeamRank, error) {
+	splitted := strings.Fields(key)
+	return fetchLeaderboard(splitted[0], splitted[1])
+}
+
+func fetchLeaderboard(year string, eventCode string) ([]TeamRank, error) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/teams", year, eventCode)
 
 	resp, err := http.Get(url)
@@ -139,7 +162,13 @@ func fetchLeaderBoard(year string, eventCode string) ([]TeamRank, error) {
 	return ranks, nil
 }
 
-func createLeaderboardEmbed(year string, eventCode string, teams []TeamRank, start int, end int, part int, totalParts int) *discordgo.MessageEmbed {
+func updateLeaderboard(state pagination.PaginationState, data []TeamRank, previousEmbed *discordgo.MessageEmbed) (*discordgo.MessageEmbed, error) {
+	year := state.ExtraData["year"]
+	eventCode := state.ExtraData["eventCode"]
+	return createLeaderboardEmbed(year, eventCode, data, state.CurrentPage+1, state.TotalPages), nil
+}
+
+func createLeaderboardEmbed(year string, eventCode string, teams []TeamRank, part int, totalParts int) *discordgo.MessageEmbed {
 	title := fmt.Sprintf("%s %s Leaderboard", year, eventCode)
 	if totalParts > 1 {
 		title = fmt.Sprintf("%s (Part %d/%d)", title, part, totalParts)
@@ -151,41 +180,13 @@ func createLeaderboardEmbed(year string, eventCode string, teams []TeamRank, sta
 		Fields: []*discordgo.MessageEmbedField{},
 	}
 
-	for i := start; i < end && i < len(teams); i++ {
+	for _, team := range teams {
 		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
-			Name:   fmt.Sprintf("Rank %d", teams[i].Rank),
-			Value:  fmt.Sprintf("Team Number: %d", teams[i].TeamNumber),
+			Name:   fmt.Sprintf("Rank %d", team.Rank),
+			Value:  fmt.Sprintf("Team Number: %d", team.TeamNumber),
 			Inline: false,
 		})
 	}
 
 	return embed
-}
-
-func showLeaderboard(ChannelID string, interaction *discordgo.InteractionCreate, year string, eventCode string, session *discordgo.Session) {
-	leaderboard, err := fetchLeaderBoard(year, eventCode)
-	if err != nil {
-		errMsg := fmt.Sprintf("Error fetching leaderboard: %v", err)
-		interactions.SendMessage(session, interaction, ChannelID, errMsg)
-		return
-	}
-
-	if len(leaderboard) == 0 {
-		msg := "No teams found in the leaderboard"
-		interactions.SendMessage(session, interaction, ChannelID, msg)
-		return
-	}
-
-	const teamsPerEmbed = 25
-	totalTeams := len(leaderboard)
-	numEmbeds := (totalTeams + teamsPerEmbed - 1) / teamsPerEmbed
-
-	for i := 0; i < numEmbeds; i++ {
-		start := i * teamsPerEmbed
-		end := min((i+1)*teamsPerEmbed, totalTeams)
-
-		embed := createLeaderboardEmbed(year, eventCode, leaderboard, start, end, i+1, numEmbeds)
-
-		interactions.SendEmbed(session, interaction, ChannelID, embed)
-	}
 }
