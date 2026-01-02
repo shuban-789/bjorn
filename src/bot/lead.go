@@ -13,7 +13,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 	"github.com/shuban-789/bjorn/src/bot/pagination"
-	"github.com/shuban-789/bjorn/src/bot/presets"
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
@@ -40,19 +39,19 @@ func init() {
 					Required:    true,
 					Choices: interactions.FtcYearChoices,
 				},
-				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "region",
-					Description: "The region the event is in (e.g., San Diego).",
-					Required:    true,
-					Autocomplete: true,
-				},
+				// {
+				// 	Type:        discordgo.ApplicationCommandOptionString,
+				// 	Name:        "region",
+				// 	Description: "The region the event is in (e.g., San Diego).",
+				// 	Required:    true,
+				// 	Autocomplete: true,
+				// },
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "event",
-					Description: "Event to look up.",
+					Description: "Event code to look up.",
 					Required:    true,
-					Autocomplete: true,
+					// Autocomplete: true,
 				},
 			},
 		},
@@ -81,8 +80,8 @@ func init() {
 					}).
 					Register();
 	
-	interactions.RegisterAutocomplete("lead/region", presets.RegionAutocomplete)
-	interactions.RegisterAutocomplete("lead/event", presets.EventAutocomplete(true))
+	// interactions.RegisterAutocomplete("lead/region", presets.RegionAutocomplete)
+	// interactions.RegisterAutocomplete("lead/event", presets.EventAutocomplete(true))
 }
 
 type TeamRank struct {
