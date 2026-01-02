@@ -141,7 +141,7 @@ func init() {
 
 	interactions.RegisterAutocomplete("match/track/region", presets.RegionAutocomplete)
 
-	interactions.RegisterAutocomplete("match/track/event", presets.EventAutocomplete)
+	interactions.RegisterAutocomplete("match/track/event", presets.EventAutocomplete(false))
 }
 
 type AllianceColor int

@@ -13,6 +13,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
 	"github.com/shuban-789/bjorn/src/bot/pagination"
+	"github.com/shuban-789/bjorn/src/bot/presets"
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
 
@@ -80,11 +81,8 @@ func init() {
 					}).
 					Register();
 	
-	// interactions.RegisterAutocomplete("lead/event", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
-	// 	year := opts["year"]
-
-	// })
-	
+	interactions.RegisterAutocomplete("lead/region", presets.RegionAutocomplete)
+	interactions.RegisterAutocomplete("lead/event", presets.EventAutocomplete(true))
 }
 
 type TeamRank struct {

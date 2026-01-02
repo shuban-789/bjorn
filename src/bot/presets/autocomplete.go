@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/shuban-789/bjorn/src/bot/interactions"
 	"github.com/shuban-789/bjorn/src/bot/search"
 	"github.com/shuban-789/bjorn/src/bot/util"
 )
@@ -21,20 +22,22 @@ func RegionAutocomplete(opts map[string]string, query string) []*discordgo.Appli
 }
 
 // note: requires region to be a parameter for the command
-func EventAutocomplete(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
-	regionCode := opts["region"]
-	if regionCode == "" {
-		return nil
+func EventAutocomplete(includeFinishedEvents bool) interactions.AutocompleteProvider {
+	return func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
+		regionCode := opts["region"]
+		if regionCode == "" {
+			return nil
+		}
+		results := search.SearchEventNames(query, 25, regionCode, false)
+		choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
+		for _, event := range results {
+			choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  event.Name,
+				Value: event.Code,
+			})
+		}
+		return choices
 	}
-	results := search.SearchEventNames(query, 25, regionCode, false)
-	choices := make([]*discordgo.ApplicationCommandOptionChoice, 0, len(results))
-	for _, event := range results {
-		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-			Name:  event.Name,
-			Value: event.Code,
-		})
-	}
-	return choices
 }
 
 func TeamsAutocomplete(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
