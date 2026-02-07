@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -81,18 +82,38 @@ func init() {
 							Choices:     interactions.FtcYearChoices,
 						},
 						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "region",
-							Description: "The region the event took/takes place in.",
-							Required:    true,
+							Type:         discordgo.ApplicationCommandOptionString,
+							Name:         "region",
+							Description:  "The region the event took/takes place in.",
+							Required:     true,
 							Autocomplete: true,
 						},
 						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "event",
-							Description: "The name of the event.",
-							Required:    true,
+							Type:         discordgo.ApplicationCommandOptionString,
+							Name:         "event",
+							Description:  "The name of the event.",
+							Required:     true,
 							Autocomplete: true,
+						},
+					},
+				},
+				{
+					Type:        discordgo.ApplicationCommandOptionSubCommand,
+					Name:        "bracket",
+					Description: "View the playoffs bracket for an event.",
+					Options: []*discordgo.ApplicationCommandOption{
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "year",
+							Description: "Year of the event (e.g., 2025).",
+							Required:    true,
+							Choices:     interactions.FtcYearChoices,
+						},
+						{
+							Type:        discordgo.ApplicationCommandOptionString,
+							Name:        "event_code",
+							Description: "The event code to view bracket for.",
+							Required:    true,
 						},
 					},
 				},
@@ -133,6 +154,14 @@ func init() {
 					return
 				}
 				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
+			case "bracket":
+				year := interactions.GetStringOption(sub.Options, "year")
+				eventCode := interactions.GetStringOption(sub.Options, "event_code")
+				if year == "" || eventCode == "" {
+					interactions.SendMessage(s, i, "", "Usage: /match bracket <year> <event_code>")
+					return
+				}
+				handleBracketCommand(s, i, year, eventCode)
 			default:
 				interactions.SendMessage(s, i, "", "Unknown subcommand for match.")
 			}
@@ -235,7 +264,7 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 		eventCode := args[2]
 		matchNumber := args[3]
 
-		getMatch(channelId, year, eventCode, matchNumber, nil, session)
+		getMatch(channelId, year, eventCode, matchNumber, nil, session, i)
 	case "eventstart":
 		if len(args) < 3 {
 			interactions.SendMessage(session, i, channelId, "Usage: `>>match eventstart <year> <eventCode>`")
@@ -313,7 +342,9 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 	}
 
 	// create the discord event
-	if guildID == "" { return } // can't create event in DMs
+	if guildID == "" {
+		return
+	} // can't create event in DMs
 	event, err := session.GuildScheduledEventCreate(guildID, &discordgo.GuildScheduledEventParams{
 		Name:               eventDetails.Name,
 		Description:        description,
@@ -331,18 +362,18 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 	interactions.SendMessage(session, i, channelID, fmt.Sprintf("Created event: %s", event.ID))
 }
 
-func getMatch(ChannelID string, year string, eventCode string, matchNumber string, event *EventTracked, session *discordgo.Session) {
+func getMatch(ChannelID string, year string, eventCode string, matchNumber string, event *EventTracked, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", year, eventCode)
 	resp, err := http.Get(url)
 	if err != nil {
-		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to fetch match data: %v", err))
+		interactions.SendMessage(session, i, ChannelID, fmt.Sprintf("Failed to fetch match data: %v", err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to read response: %v", err))
+		interactions.SendMessage(session, i, ChannelID, fmt.Sprintf("Failed to read response: %v", err))
 		return
 	}
 
@@ -365,7 +396,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	}
 	err = json.Unmarshal(body, &matches)
 	if err != nil {
-		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to parse match data: %v", err))
+		interactions.SendMessage(session, i, ChannelID, fmt.Sprintf("Failed to parse match data: %v", err))
 		return
 	}
 
@@ -489,7 +520,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 		redAlliance.WriteString(" 🏆")
 	}
 	redAlliance.WriteString(fmt.Sprintf(
-		"**\n • Auto: **%d**\n • TeleOp: **%d**\n • Fouls: **%d**",
+		"**\n • Auto: **%d**\n • TeleOp: **%d**\n • Fouls: **%d**\n\u200B",
 		selectedMatch.Scores.Red.Auto,
 		selectedMatch.Scores.Red.TeleOp,
 		selectedMatch.Scores.Red.Fouls,
@@ -530,56 +561,83 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 		Embed: embed,
 	}
 
-	// // I will not handle the case of a draw because complexity & they are so insanely rare if not impossible because of how many tiebreakers there are
-	// if event != nil && selectedMatch.TournamentLevel == "DoubleElim" {
-	// 	result := MatchResult{
-	// 		RedAlliance:  selectedMatch.RedAlliance,
-	// 		BlueAlliance: selectedMatch.BlueAlliance,
-	// 		RedScore:     selectedMatch.Scores.Red,
-	// 		BlueScore:    selectedMatch.Scores.Blue,
-	// 		Winner:       Red,
-	// 		MatchNumber:  matchNumber,
-	// 	}
-	// 	event.Tournament.MatchHistory = append(event.Tournament.MatchHistory, result)
+	// For DoubleElim (playoff) matches, generate and attach bracket image
+	var bracketBuf *bytes.Buffer
+	if selectedMatch.TournamentLevel == "DoubleElim" {
+		// Get or create bracket tracker for this event
+		tracker := GetOrCreateBracketTracker(year, eventCode)
 
-	// 	updateBracket(result, &event.Tournament)
-	// 	updateBracket(result, &event.Tournament)
+		// Update bracket with this match result
+		tracker.UpdateBracketWithMatch(
+			selectedMatch.ID,
+			selectedMatch.Series,
+			selectedMatch.RedTeams,
+			selectedMatch.BlueTeams,
+			selectedMatch.Scores.Red.Total,
+			selectedMatch.Scores.Blue.Total,
+		)
 
-	// 	image := createBracketImage(&event.Tournament)
+		// Generate bracket image
+		var err error
+		bracketBuf, err = tracker.GenerateBracketImage()
+		if err != nil {
+			fmt.Printf("Failed to generate bracket image: %v\n", err)
+		} else {
+			discordMsg.Files = []*discordgo.File{
+				{
+					Name:   "bracket.png",
+					Reader: bracketBuf,
+				},
+			}
+			// Update embed to show bracket image
+			embed.Image = &discordgo.MessageEmbedImage{
+				URL: "attachment://bracket.png",
+			}
+		}
+	}
 
-	// 	var buf bytes.Buffer
-	// 	err := png.Encode(&buf, image)
-	// 	if err != nil {
-	// 		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to encode image: %v", err))
-	// 		return
-	// 	}
+	var msg *discordgo.Message
+	if i != nil {
+		// Edit the deferred interaction response to dismiss "thinking..." indicator
+		webhookEdit := &discordgo.WebhookEdit{
+			Embeds: &[]*discordgo.MessageEmbed{embed},
+		}
+		if bracketBuf != nil {
+			webhookEdit.Files = []*discordgo.File{
+				{
+					Name:   "bracket.png",
+					Reader: bracketBuf,
+				},
+			}
+		}
+		msg, err = session.InteractionResponseEdit(i.Interaction, webhookEdit)
+		if err != nil {
+			HandleErr(err)
+			return
+		}
+	} else {
+		msg, err = session.ChannelMessageSendComplex(ChannelID, discordMsg)
+		if err != nil {
+			HandleErr(err)
+			return
+		}
+	}
 
-	// 	discordMsg.Files = []*discordgo.File{
-	// 		{
-	// 			Name:   "bracket_image.png", // The file name as it will appear in Discord
-	// 			Reader: &buf,
-	// 		},
-	// 	}
-	// }
-
-	msg, err := session.ChannelMessageSendComplex(ChannelID, discordMsg)
-	HandleErr(err)
-	
 	fmt.Print(msg.ID)
 	_, err = session.MessageThreadStartComplex(msg.ChannelID, msg.ID, &discordgo.ThreadStart{
-		Name:      matchName,
+		Name:                matchName,
 		AutoArchiveDuration: interactions.AUTO_ARCHIVE_1_DAY,
-		Type:    discordgo.ChannelTypeGuildPublicThread,
+		Type:                discordgo.ChannelTypeGuildPublicThread,
 	})
 	HandleErr(err)
 
 	// // Get channel to retrieve guild ID
 	// // for some reason message.GuildId is empty when called from interaction
-    // channel, err := session.Channel(ChannelID)
-    // if HandleErr(err) {
-    //     return
-    // }
-    // guildID := channel.GuildID
+	// channel, err := session.Channel(ChannelID)
+	// if HandleErr(err) {
+	//     return
+	// }
+	// guildID := channel.GuildID
 
 	// users, err := getUsersToPing(session, guildID, selectedMatch.RedTeams, selectedMatch.BlueTeams)
 	// if HandleErr(err) {
@@ -632,7 +690,7 @@ func getUsersToPing(session *discordgo.Session, guildId string, redTeams, blueTe
 	if HandleErr(err) {
 		return nil, err
 	}
-	
+
 	for _, member := range members {
 		for _, memberRoleID := range member.Roles {
 			// Check team roles
@@ -733,7 +791,7 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 		if len(newMatches) > 0 {
 			for _, match := range newMatches {
 				fmt.Print(util.Info("Processing match: ID=%d\n", match.ID))
-				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", match.ID), event, session)
+				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", match.ID), event, session, nil)
 			}
 			event.LastProcessedMatchId = newMatches[len(newMatches)-1].ID
 			fmt.Print(util.Info("Updated LastProcessedMatchId for event %s/%s: %d\n",
