@@ -235,7 +235,7 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 		eventCode := args[2]
 		matchNumber := args[3]
 
-		getMatch(channelId, year, eventCode, matchNumber, nil, session)
+		getMatch(channelId, year, eventCode, matchNumber, nil, session, i)
 	case "eventstart":
 		if len(args) < 3 {
 			interactions.SendMessage(session, i, channelId, "Usage: `>>match eventstart <year> <eventCode>`")
@@ -331,18 +331,18 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 	interactions.SendMessage(session, i, channelID, fmt.Sprintf("Created event: %s", event.ID))
 }
 
-func getMatch(ChannelID string, year string, eventCode string, matchNumber string, event *EventTracked, session *discordgo.Session) {
+func getMatch(ChannelID string, year string, eventCode string, matchNumber string, event *EventTracked, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", year, eventCode)
 	resp, err := http.Get(url)
 	if err != nil {
-		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to fetch match data: %v", err))
+		interactions.SendMessage(session, i, ChannelID, fmt.Sprintf("Failed to fetch match data: %v", err))
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to read response: %v", err))
+		interactions.SendMessage(session, i, ChannelID, fmt.Sprintf("Failed to read response: %v", err))
 		return
 	}
 
@@ -365,7 +365,7 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	}
 	err = json.Unmarshal(body, &matches)
 	if err != nil {
-		interactions.SendMessage(session, nil, ChannelID, fmt.Sprintf("Failed to parse match data: %v", err))
+		interactions.SendMessage(session, i, ChannelID, fmt.Sprintf("Failed to parse match data: %v", err))
 		return
 	}
 
@@ -526,9 +526,9 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 		Color: color,
 	}
 
-	discordMsg := &discordgo.MessageSend{
-		Embed: embed,
-	}
+	// discordMsg := &discordgo.MessageSend{
+	// 	Embed: embed,
+	// }
 
 	// // I will not handle the case of a draw because complexity & they are so insanely rare if not impossible because of how many tiebreakers there are
 	// if event != nil && selectedMatch.TournamentLevel == "DoubleElim" {
@@ -562,7 +562,14 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	// 	}
 	// }
 
-	msg, err := session.ChannelMessageSendComplex(ChannelID, discordMsg)
+	var msg *discordgo.Message;
+	if (i != nil) {
+		msg, _ = interactions.SendMessageComplex(session, i, ChannelID, "", &[]discordgo.MessageComponent{}, &[]*discordgo.MessageEmbed{embed}, false)
+	} else {
+		msg, err = session.ChannelMessageSendComplex(ChannelID, &discordgo.MessageSend{
+			Embed: embed,
+		})
+	}
 	HandleErr(err)
 	
 	fmt.Print(msg.ID)
@@ -733,7 +740,7 @@ func eventUpdate(apiPollTime time.Duration, session *discordgo.Session) {
 		if len(newMatches) > 0 {
 			for _, match := range newMatches {
 				fmt.Print(util.Info("Processing match: ID=%d\n", match.ID))
-				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", match.ID), event, session)
+				getMatch(event.UpdateChannelId, event.Year, event.EventCode, fmt.Sprintf("%d", match.ID), event, session, nil)
 			}
 			event.LastProcessedMatchId = newMatches[len(newMatches)-1].ID
 			fmt.Print(util.Info("Updated LastProcessedMatchId for event %s/%s: %d\n",
