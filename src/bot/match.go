@@ -566,34 +566,34 @@ func getMatch(ChannelID string, year string, eventCode string, matchNumber strin
 	HandleErr(err)
 	
 	fmt.Print(msg.ID)
-	thread, err := session.MessageThreadStartComplex(msg.ChannelID, msg.ID, &discordgo.ThreadStart{
+	_, err = session.MessageThreadStartComplex(msg.ChannelID, msg.ID, &discordgo.ThreadStart{
 		Name:      matchName,
 		AutoArchiveDuration: interactions.AUTO_ARCHIVE_1_DAY,
 		Type:    discordgo.ChannelTypeGuildPublicThread,
 	})
 	HandleErr(err)
 
-	// Get channel to retrieve guild ID
-	// for some reason message.GuildId is empty when called from interaction
-    channel, err := session.Channel(ChannelID)
-    if HandleErr(err) {
-        return
-    }
-    guildID := channel.GuildID
+	// // Get channel to retrieve guild ID
+	// // for some reason message.GuildId is empty when called from interaction
+    // channel, err := session.Channel(ChannelID)
+    // if HandleErr(err) {
+    //     return
+    // }
+    // guildID := channel.GuildID
 
-	users, err := getUsersToPing(session, guildID, selectedMatch.RedTeams, selectedMatch.BlueTeams)
-	if HandleErr(err) {
-		session.ChannelMessageSend(thread.ID, fmt.Sprintf("Error getting users to ping: %v", err))
-	}
+	// users, err := getUsersToPing(session, guildID, selectedMatch.RedTeams, selectedMatch.BlueTeams)
+	// if HandleErr(err) {
+	// 	session.ChannelMessageSend(thread.ID, fmt.Sprintf("Error getting users to ping: %v", err))
+	// }
 
-	if len(users) > 0 {
-		var mentions strings.Builder
-		mentions.WriteString("Match update! ")
-		for userID := range users {
-			mentions.WriteString(fmt.Sprintf("<@%s> ", userID))
-		}
-		session.ChannelMessageSend(thread.ID, mentions.String())
-	}
+	// if len(users) > 0 {
+	// 	var mentions strings.Builder
+	// 	mentions.WriteString("Match update! ")
+	// 	for userID := range users {
+	// 		mentions.WriteString(fmt.Sprintf("<@%s> ", userID))
+	// 	}
+	// 	session.ChannelMessageSend(thread.ID, mentions.String())
+	// }
 }
 
 func getUsersToPing(session *discordgo.Session, guildId string, redTeams, blueTeams []TeamDTO) (map[string]bool, error) {
