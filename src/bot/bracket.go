@@ -122,9 +122,10 @@ func (bt *BracketTracker) UpdateBracketWithMatch(matchID, series int, redTeams, 
 
 	bt.ProcessedMatchIDs[matchID] = true
 
-	if series == 7 {
+	// todo: make this properly handle double elim finals, currently just assumes series 6 and 7 are finals and that winner of either is champion
+	if series == 9 {
 		bt.Champion = match.Winner
-	} else if series == 6 {
+	} else if series == 10 {
 		bt.Champion = match.Winner
 	}
 }
