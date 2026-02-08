@@ -15,33 +15,33 @@ import (
 )
 
 type EventData struct {
-	Season int `json:"season"`
-	Code  string `json:"code"`
-	DivisionCode string `json:"divisionCode"`
-	Name string `json:"name"`
-	FieldCount int `json:"fieldCount"`
-	Published bool `json:"published"`
-	Type string `json:"type"`
-	RegionCode string `json:"regionCode"`
-	LeagueCode string `json:"leagueCode"`
-	DistrictCode string `json:"districtCode"`
-	Venue string `json:"venue"`
-	Address string `json:"address"`
-	Country string `json:"country"`
-	State string `json:"state"`
-	City string `json:"city"`
-	Website string `json:"website"`
+	Season        int    `json:"season"`
+	Code          string `json:"code"`
+	DivisionCode  string `json:"divisionCode"`
+	Name          string `json:"name"`
+	FieldCount    int    `json:"fieldCount"`
+	Published     bool   `json:"published"`
+	Type          string `json:"type"`
+	RegionCode    string `json:"regionCode"`
+	LeagueCode    string `json:"leagueCode"`
+	DistrictCode  string `json:"districtCode"`
+	Venue         string `json:"venue"`
+	Address       string `json:"address"`
+	Country       string `json:"country"`
+	State         string `json:"state"`
+	City          string `json:"city"`
+	Website       string `json:"website"`
 	LiveStreamUrl string `json:"liveStreamUrl"`
-	Timezone string `json:"timezone"`
-	Start string `json:"start"`
-	End string `json:"end"`
-	Ongoing bool `json:"ongoing"`
-	ModifiedRules bool `json:"modifiedRules"`
-	HasMatches bool `json:"hasMatches"`
+	Timezone      string `json:"timezone"`
+	Start         string `json:"start"`
+	End           string `json:"end"`
+	Ongoing       bool   `json:"ongoing"`
+	ModifiedRules bool   `json:"modifiedRules"`
+	HasMatches    bool   `json:"hasMatches"`
 }
 
 type EventInfo struct {
-	Code 	 string
+	Code     string
 	Name     string
 	Tokens   []string // preprocess tokens for quick searching
 	Region   RegionInfo
@@ -50,17 +50,19 @@ type EventInfo struct {
 }
 
 func (e EventInfo) GetSearchTokens() []string {
-	return e.Tokens;
+	return e.Tokens
 }
 
-var cachedEventData map[string][]EventInfo = nil
-var lastEventDataFetch time.Time
+var (
+	cachedEventData    map[string][]EventInfo = nil
+	lastEventDataFetch time.Time
+)
 
 func FetchEvents() map[string][]EventInfo {
 	if cachedEventData != nil && time.Since(lastEventDataFetch) < 24*time.Hour {
 		return cachedEventData
 	}
-	
+
 	fmt.Println(util.Info("Fetching events data from API..."))
 	api := "https://api.ftcscout.org/rest/v1/events/search/2025"
 
@@ -99,11 +101,11 @@ func FetchEvents() map[string][]EventInfo {
 			continue
 		}
 		cachedEventData[regionInfo.Code] = append(cachedEventData[regionInfo.Code], EventInfo{
-			Code: event.Code,
-			Name: event.Name,
-			Tokens: util.GenerateNormalizedTokens(event.Name),
-			Region: regionInfo,
-			End: event.End,
+			Code:     event.Code,
+			Name:     event.Name,
+			Tokens:   util.GenerateNormalizedTokens(event.Name),
+			Region:   regionInfo,
+			End:      event.End,
 			Timezone: event.Timezone,
 		})
 	}
@@ -118,10 +120,10 @@ func startEventFetcher() {
 			fmt.Println(util.Info("Event data refreshed"))
 			time.Sleep(24 * time.Hour)
 		}
-	}();
+	}()
 }
 
-func GetEventsData() map[string][]EventInfo{
+func GetEventsData() map[string][]EventInfo {
 	return cachedEventData
 }
 
@@ -176,7 +178,7 @@ func GetEventCodeFromName(name string, regionCode string) (code string, ok bool)
 
 func init() {
 	startEventFetcher()
-}	
+}
 
 func FetchEventData(year, eventCode string) (EventData, error) {
 	url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s", year, eventCode)
@@ -209,12 +211,12 @@ func GetEventStartEndTime(eventData EventData, today time.Time, location *time.L
 	startTime, err := time.Parse(layout, eventData.Start)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("failed to parse event start time: %v", err)
-	}	
+	}
 
 	endTime, err := time.Parse(layout, eventData.End)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("failed to parse event end time: %v", err)
-	}	
+	}
 
 	startTime = time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 8, 0, 0, 0, location)
 	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 17, 0, 0, 0, location)
@@ -222,7 +224,7 @@ func GetEventStartEndTime(eventData EventData, today time.Time, location *time.L
 	// If we start after 8, set it to be scheduled in the future so it doesn't error out
 	if startTime.Year() == today.Year() && startTime.YearDay() == today.YearDay() && today.Hour() >= 8 {
 		startTime = today.Add(5 * time.Minute)
-	}	
+	}
 
 	return startTime, endTime, nil
 }
@@ -233,7 +235,7 @@ func GetEventEndTime(eventInfo EventInfo, today time.Time, location *time.Locati
 	endTime, err := time.Parse(layout, eventInfo.End)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("failed to parse event end time: %v", err)
-	}	
+	}
 
 	endTime = time.Date(endTime.Year(), endTime.Month(), endTime.Day(), 17, 0, 0, 0, location)
 	return endTime, nil
@@ -252,4 +254,15 @@ func EventHasEnded(eventInfo EventInfo) (bool, error) {
 	}
 
 	return endTime.Before(today), nil
+}
+
+func GetEventNameFromCode(regionCode string, eventCode string) string {
+	eventsMap := GetEventsData()
+	events := eventsMap[regionCode]
+	for _, event := range events {
+		if event.Code == eventCode {
+			return event.Name
+		}
+	}
+	return ""
 }

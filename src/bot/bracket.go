@@ -11,6 +11,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
+	"github.com/shuban-789/bjorn/src/bot/search"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
@@ -19,6 +20,7 @@ import (
 type BracketTracker struct {
 	Year              string
 	EventCode         string
+	EventName         string
 	Matches           map[int]*BracketMatch
 	Alliances         map[int]*Alliance
 	Champion          *Alliance
@@ -57,6 +59,7 @@ var (
 	bracketTitleColor  = color.RGBA{255, 215, 0, 255}
 	bracketLoserColor  = color.RGBA{240, 71, 71, 255}
 )
+
 var (
 	bracketTrackers = make(map[string]*BracketTracker)
 	bracketMu       sync.RWMutex
@@ -71,9 +74,16 @@ func GetOrCreateBracketTracker(year, eventCode string) *BracketTracker {
 		return tracker
 	}
 
+	// todo: hardcoding san diego for now, not ideal though
+	var eventName string = search.GetEventNameFromCode("USCASD", eventCode)
+	if eventName == "" {
+		eventName = eventCode
+	}
+
 	tracker := &BracketTracker{
 		Year:              year,
 		EventCode:         eventCode,
+		EventName:         eventName,
 		Matches:           make(map[int]*BracketMatch),
 		Alliances:         make(map[int]*Alliance),
 		ProcessedMatchIDs: make(map[int]bool),
@@ -153,7 +163,7 @@ func (bt *BracketTracker) GenerateBracketImage() (*bytes.Buffer, error) {
 
 	draw.Draw(img, img.Bounds(), &image.Uniform{bracketBgColor}, image.Point{}, draw.Src)
 
-	title := bt.EventCode + " PLAYOFFS BRACKET"
+	title := bt.EventName + " PLAYOFFS BRACKET"
 	drawTextOnBracket(img, 250, 18, title, bracketTitleColor)
 
 	drawTextOnBracket(img, 50, 45, "UPPER BRACKET", bracketGrayColor)

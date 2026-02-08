@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"strings"
-
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
