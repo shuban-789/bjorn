@@ -211,7 +211,6 @@ func (bt *BracketTracker) GenerateBracketImage() (*bytes.Buffer, error) {
 	drawThickLineOnBracket(img, 210, 162, 280, 122, bracketLineColor)
 	drawThickLineOnBracket(img, 210, 272, 280, 272, bracketLineColor)
 	drawThickLineOnBracket(img, 360, 150, 360, 245, bracketLineColor)
-	drawThickLineOnBracket(img, 280, 272, 360, 272, bracketLineColor)
 	drawThickLineOnBracket(img, 440, 122, 510, 162, bracketLineColor)
 	drawThickLineOnBracket(img, 440, 272, 485, 272, bracketLineColor)
 	drawThickLineOnBracket(img, 485, 272, 485, 190, bracketLineColor)
