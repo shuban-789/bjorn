@@ -94,6 +94,12 @@ func init() {
 							Required:     true,
 							Autocomplete: true,
 						},
+						{
+							Type:        discordgo.ApplicationCommandOptionBoolean,
+							Name:        "show_completed",
+							Description: "Whether to show matches already completed, or only show new ones.",
+							Required:    false,
+						},
 					},
 				},
 				{
@@ -152,7 +158,8 @@ func init() {
 					interactions.SendMessage(s, i, "", "Usage: /match track <year> <region> <event_name>")
 					return
 				}
-				matchcmd(s, nil, i, []string{"eventstart", year, eventCode})
+				showCompleted := interactions.GetBoolOption(sub.Options, "show_completed", true)
+				matchcmd(s, nil, i, []string{"eventstart", year, eventCode, fmt.Sprintf("%t", showCompleted)})
 			case "bracket":
 				year := interactions.GetStringOption(sub.Options, "year")
 				eventCode := interactions.GetStringOption(sub.Options, "event_code")
@@ -283,13 +290,17 @@ func matchcmd(session *discordgo.Session, message *discordgo.MessageCreate, i *d
 
 		year := args[1]
 		eventCode := args[2]
-		eventStart(channelId, guildId, year, eventCode, session, i)
+		showCompleted := true
+		if len(args) >= 4 && args[3] == "false" {
+			showCompleted = false
+		}
+		eventStart(channelId, guildId, year, eventCode, showCompleted, session, i)
 	default:
 		interactions.SendMessage(session, i, channelId, "Unknown subcommand. Available subcommands: `info`, `eventstart`")
 	}
 }
 
-func eventStart(channelID, guildID, year, eventCode string, session *discordgo.Session, i *discordgo.InteractionCreate) {
+func eventStart(channelID, guildID, year, eventCode string, showCompleted bool, session *discordgo.Session, i *discordgo.InteractionCreate) {
 	eventDetails, err := search.FetchEventData(year, eventCode)
 	if err != nil {
 		interactions.SendMessage(session, i, channelID, err.Error())
@@ -317,13 +328,35 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 	description := fmt.Sprintf("Event: %s\nVenue: %s\nAddress: %s, %s, %s, %s\nWebsite: %s\nLive Stream: %s",
 		eventDetails.Name, eventDetails.Venue, eventDetails.Address, eventDetails.City, eventDetails.State, eventDetails.Country, eventDetails.Website, eventDetails.LiveStreamUrl)
 
+	// Determine starting match ID based on showCompleted flag
+	lastProcessedMatchId := -100 // Will process all matches
+	if !showCompleted {
+		// Fetch current matches to find the highest played match ID
+		url := fmt.Sprintf("https://api.ftcscout.org/rest/v1/events/%s/%s/matches", year, eventCode)
+		resp, err := http.Get(url)
+		if err == nil {
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err == nil {
+				var matches []Match
+				if json.Unmarshal(body, &matches) == nil {
+					for _, match := range matches {
+						if match.HasBeenPlayed && match.ID > lastProcessedMatchId {
+							lastProcessedMatchId = match.ID
+						}
+					}
+				}
+			}
+		}
+	}
+
 	eventsBeingTracked = append(eventsBeingTracked, EventTracked{
 		Year:                 year,
 		EventCode:            eventCode,
 		UpdateChannelId:      channelID,
 		LastUpdateTime:       time.Date(1, time.January, 1, 1, 1, 1, 1, time.Now().Location()), // hopefully will force an immediate update
 		CachedMatches:        []Match{},
-		LastProcessedMatchId: -100, // should hopefully force update
+		LastProcessedMatchId: lastProcessedMatchId,
 		Ongoing:              eventDetails.Ongoing,
 		StartTime:            startTime,
 		EndTime:              endTime,
@@ -333,7 +366,12 @@ func eventStart(channelID, guildID, year, eventCode string, session *discordgo.S
 			Eliminated:     make(map[TwoTeamAlliance]bool),
 		},
 	})
-	interactions.SendMessage(session, i, channelID, fmt.Sprintf("Started tracking matches for event %s in %s...", eventCode, year))
+
+	statusMsg := fmt.Sprintf("Started tracking matches for event %s in %s...", eventCode, year)
+	if !showCompleted && lastProcessedMatchId > 0 {
+		statusMsg += fmt.Sprintf(" (skipping %d already completed matches)", lastProcessedMatchId)
+	}
+	interactions.SendMessage(session, i, channelID, statusMsg)
 
 	if startTime.Before(today) {
 		interactions.SendMessage(session, i, channelID, "This event has already started! Will not create event.")

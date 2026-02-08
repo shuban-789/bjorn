@@ -178,3 +178,37 @@ func GetStringOption(opts []*discordgo.ApplicationCommandInteractionDataOption, 
 	}
 	return ""
 }
+
+// utility to get bool option from interaction data options, with a default value
+func GetBoolOption(opts []*discordgo.ApplicationCommandInteractionDataOption, name string, defaultValue bool) bool {
+	for _, o := range opts {
+		if o.Name == name && o.Value != nil {
+			if v, ok := o.Value.(bool); ok {
+				return v
+			}
+		}
+		// if this option is a subcommand, search its children
+		if len(o.Options) > 0 {
+			if found, v := getBoolOptionHelper(o.Options, name); found {
+				return v
+			}
+		}
+	}
+	return defaultValue
+}
+
+func getBoolOptionHelper(opts []*discordgo.ApplicationCommandInteractionDataOption, name string) (bool, bool) {
+	for _, o := range opts {
+		if o.Name == name && o.Value != nil {
+			if v, ok := o.Value.(bool); ok {
+				return true, v
+			}
+		}
+		if len(o.Options) > 0 {
+			if found, v := getBoolOptionHelper(o.Options, name); found {
+				return true, v
+			}
+		}
+	}
+	return false, false
+}

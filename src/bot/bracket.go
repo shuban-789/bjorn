@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
+	"strings"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -18,15 +19,14 @@ import (
 )
 
 type BracketTracker struct {
-	Year               string
-	EventCode          string
-	EventName          string
-	Matches            map[int]*BracketMatch
-	Alliances          map[int]*Alliance
-	Champion           *Alliance
-	UpperBracketWinner *Alliance
-	ProcessedMatchIDs  map[int]bool
-	mu                 sync.Mutex
+	Year              string
+	EventCode         string
+	EventName         string
+	Matches           map[int]*BracketMatch
+	Alliances         map[int]*Alliance
+	Champion          *Alliance
+	ProcessedMatchIDs map[int]bool
+	mu                sync.Mutex
 }
 
 type Alliance struct {
@@ -123,23 +123,10 @@ func (bt *BracketTracker) UpdateBracketWithMatch(matchID, series int, redTeams, 
 
 	bt.ProcessedMatchIDs[matchID] = true
 
-	// Double elimination bracket champion logic:
-	// Series 3 = Upper Bracket Final (winner goes to Finals undefeated)
-	// Series 6 = Finals 1 (Upper Bracket Winner vs Lower Bracket Winner)
-	// Series 7 = Finals 2 (bracket reset, only played if Lower Bracket Winner won Finals 1)
-	switch series {
-	case 3:
-		// Track the upper bracket winner (they haven't lost yet)
-		bt.UpperBracketWinner = match.Winner
-	case 6:
-		// Finals 1: If upper bracket winner wins, they're champion (never lost)
-		// If lower bracket winner wins, we need Finals 2 (bracket reset)
-		if bt.UpperBracketWinner != nil && match.Winner == bt.UpperBracketWinner {
-			bt.Champion = match.Winner
-		}
-		// If lower bracket winner won, champion will be decided in Finals 2
-	case 7:
-		// Finals 2 (bracket reset): Winner is champion
+	// todo: make this properly handle double elim finals, currently just assumes series 9 and 10 are finals and that winner of either is champion
+	if series == 9 {
+		bt.Champion = match.Winner
+	} else if series == 10 {
 		bt.Champion = match.Winner
 	}
 }
@@ -178,7 +165,7 @@ func (bt *BracketTracker) GenerateBracketImage() (*bytes.Buffer, error) {
 
 	draw.Draw(img, img.Bounds(), &image.Uniform{bracketBgColor}, image.Point{}, draw.Src)
 
-	title := bt.EventName + " PLAYOFFS BRACKET"
+	title := strings.ToUpper(bt.EventName) + " PLAYOFFS BRACKET"
 	drawTextOnBracket(img, 250, 18, title, bracketTitleColor)
 
 	drawTextOnBracket(img, 50, 45, "UPPER BRACKET", bracketGrayColor)
