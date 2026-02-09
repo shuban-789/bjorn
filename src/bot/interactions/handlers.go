@@ -13,17 +13,18 @@ var CmdPrefix = ">>"
 var Commands []*discordgo.ApplicationCommand
 
 var FtcYearChoices []*discordgo.ApplicationCommandOptionChoice = []*discordgo.ApplicationCommandOptionChoice{
-	{Name:  "2025-2026", Value: "2025"},
-	{Name:  "2024-2025", Value: "2024"},
-	{Name:  "2023-2024", Value: "2023"},
-	{Name:  "2022-2023", Value: "2022"},
-	{Name:  "2021-2022", Value: "2021"},
-	{Name:  "2020-2021", Value: "2020"},
-	{Name:  "2019-2020", Value: "2019"},
+	{Name: "2025-2026", Value: "2025"},
+	{Name: "2024-2025", Value: "2024"},
+	{Name: "2023-2024", Value: "2023"},
+	{Name: "2022-2023", Value: "2022"},
+	{Name: "2021-2022", Value: "2021"},
+	{Name: "2020-2021", Value: "2020"},
+	{Name: "2019-2020", Value: "2019"},
 }
 
 // commandHandlers maps top-level command names to interaction handlers.
 type CommandHandler func(*discordgo.Session, *discordgo.InteractionCreate)
+
 var CommandHandlers map[string]CommandHandler
 
 // map of top level cmds for custom autocomplete handlers so you can write more custom code if needed
@@ -40,10 +41,12 @@ var AutocompleteProviders map[string]AutocompleteProvider
 
 // maps custom ID of component to handler func
 type ComponentHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, data []string)
+
 var ComponentHandlers map[string]ComponentHandler
 
 // maps custom ID of modal to handler func
 type ModalHandler func(s *discordgo.Session, i *discordgo.InteractionCreate, id_data []string, modal_data discordgo.ModalSubmitInteractionData)
+
 var ModalHandlers map[string]ModalHandler
 
 func RegisterCommand(cmd *discordgo.ApplicationCommand, handler CommandHandler) {
@@ -141,7 +144,6 @@ func HandleAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			Choices: choices,
 		},
 	})
-
 	if err != nil {
 		fmt.Println(util.Fail("Error responding to autocomplete interaction: %v", err))
 	}

@@ -22,10 +22,10 @@ func init() {
 			Description: "Assigns you a role based on your team ID.",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
-					Type:        discordgo.ApplicationCommandOptionString,
-					Name:        "team",
-					Description: "Your FTC team.",
-					Required:    true,
+					Type:         discordgo.ApplicationCommandOptionString,
+					Name:         "team",
+					Description:  "Your FTC team.",
+					Required:     true,
 					Autocomplete: true,
 					ChannelTypes: interactions.GUILDS_ONLY,
 				},
@@ -42,6 +42,32 @@ func init() {
 			rolemeCmd(s, nil, i, []string{teamID})
 		},
 	)
+
+	// interactions.RegisterCommand(
+	// 	&discordgo.ApplicationCommand{
+	// 		Name:        "blacklist",
+	// 		Description: "Blacklists someone from using the role command (admin only).",
+	// 		Options: []*discordgo.ApplicationCommandOption{
+	// 			{
+	// 				Type:         discordgo.ApplicationCommandOptionUser,
+	// 				Name:         "user",
+	// 				Description:  "The user to blacklist.",
+	// 				Required:     true,
+	// 				Autocomplete: true,
+	// 				ChannelTypes: interactions.GUILDS_ONLY,
+	// 			},
+	// 		},
+	// 	},
+	// 	func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// 		_ = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{Type: discordgo.InteractionResponseDeferredChannelMessageWithSource})
+	// 		data := i.ApplicationCommandData()
+	// 		user := interactions.GetUserOption(data.Options, "user")
+	// 		if user == "" {
+	// 			interactions.SendMessage(s, i, "", "Please provide a user to blacklist.")
+	// 			return
+	// 		}
+	// 	},
+	// )
 
 	// Team autocomplete for /roleme team
 	interactions.RegisterAutocomplete("roleme/team", func(opts map[string]string, query string) []*discordgo.ApplicationCommandOptionChoice {
@@ -96,7 +122,7 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 		ban := blacklist.Text()
 		hashedID := hash(authorID)
 		if strings.Compare(ban, hashedID) == 0 {
-			session.ChannelMessageSend(ChannelID, "Sorry, but you are banned from using this command.")
+			interactions.SendMessage(session, i, ChannelID, "Sorry, but you are banned from using this command.")
 			return
 		}
 	}
@@ -117,7 +143,7 @@ func rolemeCmd(session *discordgo.Session, message *discordgo.MessageCreate, i *
 		}
 		return
 	}
-	
+
 	// plan:
 	// search for a role with the name "<team_id> <team_name>"
 	// if that role exists, add it to the user
