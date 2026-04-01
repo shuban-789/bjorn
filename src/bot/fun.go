@@ -3,6 +3,7 @@ package bot
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/shuban-789/bjorn/src/bot/interactions"
@@ -32,6 +33,12 @@ func init() {
 						discordgo.ChannelTypeGuildPrivateThread,
 					},
 				},
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "replyto",
+					Description: "Optional message link to reply to.",
+					Required:    false,
+				},
 			},
 		},
 		sayCommandHandler,
@@ -46,7 +53,26 @@ func sayCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	channel := data.Options[1].ChannelValue(s)
 	fmt.Println(util.Info("Sending message to channel %s: %s", channel.ID, text))
 
-	_, err := s.ChannelMessageSend(channel.ID, text)
+	var messageID string
+	if len(data.Options) > 2 && data.Options[2].StringValue() != "" {
+		replyLink := data.Options[2].StringValue()
+		// converts msg link to message ID, format is https://discord.com/channels/GUILD_ID/CHANNEL_ID/MESSAGE_ID
+		parts := strings.Split(replyLink, "/")
+		if len(parts) >= 7 {
+			messageID = parts[len(parts)-1]
+			fmt.Println(util.Info("Replying to message: %s", messageID))
+		}
+	}
+
+	var err error
+	if messageID != "" {
+		_, err = s.ChannelMessageSendReply(channel.ID, text, &discordgo.MessageReference{
+			MessageID: messageID,
+		})
+	} else {
+		_, err = s.ChannelMessageSend(channel.ID, text)
+	}
+
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
