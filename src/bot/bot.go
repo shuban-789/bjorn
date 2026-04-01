@@ -55,6 +55,12 @@ func Deploy(token string) {
 	}
 	fmt.Println(util.Success("Application commands registered"))
 
+	// TODO delete later, temporarily print all registered command handlers for debugging
+	fmt.Println(util.Info("Registered handlers: %d", len(interactions.CommandHandlers)))
+	for name := range interactions.CommandHandlers {
+		fmt.Println(util.Info("  - %s", name))
+	}
+
 	startMatchEventUpdater(session, 2*time.Second)
 
 	allCommands, err := session.ApplicationCommands(session.State.User.ID, GuildId)
@@ -79,7 +85,7 @@ func interactionCreateHandler(s *discordgo.Session, i *discordgo.InteractionCrea
 		if h, ok := interactions.CommandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
 		}
-	
+
 	case discordgo.InteractionApplicationCommandAutocomplete:
 		// first see if a custom one exists
 		if h, ok := interactions.AutocompleteHandlers[i.ApplicationCommandData().Name]; ok {
