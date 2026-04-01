@@ -11,10 +11,13 @@ import (
 )
 
 func init() {
+	manageServerPermissions := int64(discordgo.PermissionManageServer)
+
 	interactions.RegisterCommand(
 		&discordgo.ApplicationCommand{
-			Name:        "say",
-			Description: "Have Bjorn say something in a specific channel.",
+			Name:                     "say",
+			Description:              "Have Bjorn say something in a specific channel.",
+			DefaultMemberPermissions: &manageServerPermissions,
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
@@ -47,6 +50,19 @@ func init() {
 
 func sayCommandHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	fmt.Println(util.Info("Received /say command from %s#%s", i.Member.User.Username, i.Member.User.Discriminator))
+
+	hasManageServer := i.Member != nil && i.Member.Permissions&discordgo.PermissionManageServer != 0
+	hasAdministrator := i.Member != nil && i.Member.Permissions&discordgo.PermissionAdministrator != 0
+	if !hasManageServer && !hasAdministrator {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "You need Manage Server permissions to use /say.",
+				Flags:   discordgo.MessageFlagsEphemeral,
+			},
+		})
+		return
+	}
 
 	data := i.ApplicationCommandData()
 	text := data.Options[0].StringValue()
