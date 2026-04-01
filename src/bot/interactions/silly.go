@@ -7,7 +7,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-var isEvil bool = true
+var evil bool = true
 
 var evilJokes = []string{
 	"I sort fries by length before eating them.",
@@ -29,7 +29,7 @@ func getEvilSuffix() string {
 }
 
 func applyEvilToMessage(message string) string {
-	if !isEvil {
+	if !evil {
 		return message
 	}
 
@@ -37,7 +37,7 @@ func applyEvilToMessage(message string) string {
 }
 
 func applyEvilToEmbed(embed *discordgo.MessageEmbed) {
-	if !isEvil || embed == nil {
+	if !evil || embed == nil {
 		return
 	}
 
@@ -56,7 +56,7 @@ func applyEvilToEmbed(embed *discordgo.MessageEmbed) {
 }
 
 func applyEvilToEmbeds(embeds *[]*discordgo.MessageEmbed) {
-	if !isEvil || embeds == nil {
+	if !evil || embeds == nil {
 		return
 	}
 
