@@ -1,12 +1,8 @@
 # bjorn
 
-![Untitled design](https://github.com/user-attachments/assets/2e17800c-f1da-470a-9cfa-2e6b99d2689d)
-
-
 ## 📝 Created By
 - @shuban-789 from 12499 Gear Up
 - @aaguy-hue from 22105 Runtime Terror
-- @penguinencounter from 12499 Gear Up
 
 ## 📱 Discord Contacts
 - @shubuntu
